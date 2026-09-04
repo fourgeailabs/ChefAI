@@ -1,13 +1,22 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ai.GeminiRecipeService
+import com.example.ai.GeminiVisionService
 import com.example.ai.GeneratedRecipe
+import com.example.ai.VisualIngredientRecognitionResult
+import com.example.data.BarcodeProductRegistry
 import com.example.data.CelebrityChefRegistry
 import com.example.data.ChefDatabase
+import com.example.data.LocalePricingData
+import com.example.data.LocalePricingManager
+import com.example.data.PantryItemEntity
 import com.example.data.RecipeEntity
+import com.example.data.ScannedProduct
 import com.example.data.ShoppingItemEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class AppThemeMode(val title: String, val subtitle: String) {
+    SYSTEM("System Default", "Follows device light/dark appearance"),
+    LIGHT("Light Mode", "Warm culinary canvas with crisp high-contrast styling"),
+    DARK("Dark Mode", "Rich charcoal & terracotta dark gourmet aesthetic")
+}
+
 data class GenerationProgressState(
     val isGenerating: Boolean = false,
     val progress: Float = 0f,
@@ -25,18 +40,61 @@ data class GenerationProgressState(
     val chefName: String = ""
 )
 
-data class UpdateCheckState(
-    val isChecking: Boolean = false,
-    val isUpdateAvailable: Boolean = false,
-    val showDialog: Boolean = false,
-    val latestVersion: String = "1.03.00",
-    val currentVersion: String = "1.03.00",
-    val releaseNotes: String = ""
-)
-
 class ChefViewModel(application: Application) : AndroidViewModel(application) {
+    private val prefs = application.getSharedPreferences("chefai_settings", Context.MODE_PRIVATE)
     private val dao = ChefDatabase.getDatabase(application).chefDao()
     private val geminiService = GeminiRecipeService()
+    private val geminiVisionService = GeminiVisionService()
+    private val localePricingManager = LocalePricingManager(application)
+
+    private val _themeMode = MutableStateFlow(
+        try {
+            val saved = prefs.getString("theme_mode", AppThemeMode.SYSTEM.name)
+            AppThemeMode.valueOf(saved ?: AppThemeMode.SYSTEM.name)
+        } catch (e: Exception) {
+            AppThemeMode.SYSTEM
+        }
+    )
+    val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: AppThemeMode) {
+        _themeMode.value = mode
+        prefs.edit().putString("theme_mode", mode.name).apply()
+    }
+
+    // Locale & GPS Local Pricing Intelligence State
+    private val _localePricingData = MutableStateFlow(LocalePricingData())
+    val localePricingData: StateFlow<LocalePricingData> = _localePricingData.asStateFlow()
+
+    private val _initializationStatus = MutableStateFlow("Connecting to cloud services...")
+    val initializationStatus: StateFlow<String> = _initializationStatus.asStateFlow()
+
+    private val _initializationProgress = MutableStateFlow(0.15f)
+    val initializationProgress: StateFlow<Float> = _initializationProgress.asStateFlow()
+
+    private val _isAppInitialized = MutableStateFlow(false)
+    val isAppInitialized: StateFlow<Boolean> = _isAppInitialized.asStateFlow()
+
+    private val _showSplashScreen = MutableStateFlow(true)
+    val showSplashScreen: StateFlow<Boolean> = _showSplashScreen.asStateFlow()
+
+    fun dismissSplashScreen() {
+        _showSplashScreen.value = false
+    }
+
+    fun refreshLocalePricing() {
+        viewModelScope.launch {
+            _initializationStatus.value = "Updating GPS & regional price index..."
+            _initializationProgress.value = 0.4f
+            val data = localePricingManager.resolveLocaleAndPricing { stage, prog ->
+                _initializationStatus.value = stage
+                _initializationProgress.value = prog
+            }
+            _localePricingData.value = data
+            _initializationStatus.value = "Market pricing updated!"
+            _initializationProgress.value = 1.0f
+        }
+    }
 
     val allRecipes: StateFlow<List<RecipeEntity>> = dao.getAllRecipes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -47,16 +105,30 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
     val shoppingItems: StateFlow<List<ShoppingItemEntity>> = dao.getAllShoppingItems()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val pantryItems: StateFlow<List<com.example.data.PantryItemEntity>> = dao.getAllPantryItems()
+    val pantryItems: StateFlow<List<PantryItemEntity>> = dao.getAllPantryItems()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _progressState = MutableStateFlow(GenerationProgressState())
     val progressState: StateFlow<GenerationProgressState> = _progressState.asStateFlow()
 
-    private val _updateState = MutableStateFlow(UpdateCheckState())
-    val updateState: StateFlow<UpdateCheckState> = _updateState.asStateFlow()
-
     init {
+        // Run background app startup: network check, GPS location & local market pricing index
+        viewModelScope.launch {
+            _initializationStatus.value = "Connecting to internet services..."
+            _initializationProgress.value = 0.25f
+            delay(300)
+
+            val pricing = localePricingManager.resolveLocaleAndPricing { stage, progress ->
+                _initializationStatus.value = stage
+                _initializationProgress.value = progress
+            }
+            _localePricingData.value = pricing
+            delay(200)
+
+            _initializationStatus.value = "Culinary AI & Master Chef Personas Ready!"
+            _initializationProgress.value = 1.0f
+            _isAppInitialized.value = true
+        }
         // Populate initial showcase recipes from iconic master chefs if database is clean
         viewModelScope.launch {
             val existing = dao.getRecipeById(1L)
@@ -332,23 +404,61 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Auto-update check simulation
-    fun checkForUpdates(isManual: Boolean = false) {
+    // Visual AI Ingredient Recognition Engine (Images NEVER saved to disk)
+    fun identifyVisualIngredient(
+        bitmap: Bitmap,
+        onResult: (VisualIngredientRecognitionResult, List<ShoppingItemEntity>) -> Unit
+    ) {
         viewModelScope.launch {
-            _updateState.value = _updateState.value.copy(isChecking = true)
-            delay(1200) // Simulated network check to GitHub Releases API
-            _updateState.value = UpdateCheckState(
-                isChecking = false,
-                isUpdateAvailable = false, // We are on latest 1.03.00
-                showDialog = isManual,
-                currentVersion = "1.03.00",
-                latestVersion = "1.03.00",
-                releaseNotes = "Version 1.03.00 includes the Smart Barcode Scanner with live Camera viewfinder, instant pantry addition, and automated shopping list item check-off."
-            )
+            val result = geminiVisionService.identifyIngredient(bitmap)
+            
+            // Look up matching shopping list items for UI verification prompt
+            val currentShopping = shoppingItems.value
+            val currentNames = currentShopping.map { it.itemName }
+            val matchedNames = BarcodeProductRegistry.findMatchingShoppingItems(result.ingredientName, currentNames)
+            val matchedEntities = currentShopping.filter { it.itemName in matchedNames }
+
+            onResult(result, matchedEntities)
         }
     }
 
-    fun dismissUpdateDialog() {
-        _updateState.value = _updateState.value.copy(showDialog = false)
+    // Confirmation step for AI Discovered ingredient
+    fun confirmVisualIngredient(
+        ingredientName: String,
+        category: String = "Produce",
+        autoAddToPantry: Boolean = true,
+        autoCheckShoppingList: Boolean = true,
+        onConfirmed: (List<ShoppingItemEntity>) -> Unit
+    ) {
+        if (ingredientName.isBlank()) return
+        viewModelScope.launch {
+            // 1. Add to Pantry Inventory
+            if (autoAddToPantry) {
+                dao.insertPantryItem(
+                    PantryItemEntity(
+                        name = ingredientName.trim(),
+                        barcode = "",
+                        brand = "Fresh / Non-Barcode",
+                        category = category.trim()
+                    )
+                )
+            }
+
+            // 2. Auto check off matching shopping list items
+            val currentShopping = shoppingItems.value
+            val currentNames = currentShopping.map { it.itemName }
+            val matchedNames = BarcodeProductRegistry.findMatchingShoppingItems(ingredientName.trim(), currentNames)
+            val matchedEntities = currentShopping.filter { it.itemName in matchedNames }
+
+            if (autoCheckShoppingList && matchedEntities.isNotEmpty()) {
+                for (item in matchedEntities) {
+                    if (!item.isChecked) {
+                        dao.updateShoppingItem(item.copy(isChecked = true))
+                    }
+                }
+            }
+
+            onConfirmed(matchedEntities)
+        }
     }
 }

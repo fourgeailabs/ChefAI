@@ -16,8 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,12 +35,39 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.05.00",
+            date = "September 03, 2026",
+            title = "Loading Screen, GPS Locale & Supermarket Pricing Engine",
+            isLatest = true,
+            highlights = listOf(
+                "Animated Gourmet Splash & Loading Screen: Beautiful startup screen featuring a glowing chef emblem, pulse animations, and real-time cloud service & GPS connection progress.",
+                "GPS Locale & Market Pricing Intelligence: Automatically detects user city and calculates regional produce price indexes to ensure the best local grocery pricing.",
+                "Nearby Supermarket Deals & Value Hubs: Explore nearby grocery options (ALDI, Trader Joe's, Local Co-ops, Whole Foods) with live estimated distance and discount tags.",
+                "Pantry & Shopping List Price Indexing: View real-time local price multipliers and budget indicators directly on the Pantry and Shopping screens.",
+                "Foolproof GitHub Actions CI/CD: Automated keystore generation and base64 restore pipeline guaranteeing zero keystore signing validation failures during APK builds."
+            )
+        ),
+        ReleaseNote(
+            version = "1.04.00",
+            date = "September 03, 2026",
+            title = "AI Camera Vision for Fresh Ingredients & Light/Dark Themes",
+            isLatest = false,
+            highlights = listOf(
+                "AI Camera Vision for Non-Barcode Produce: Use the camera to snap photos of raw produce, fresh herbs, cuts of meat, seafood, and loose ingredients to identify them with AI.",
+                "Mandatory Interactive Verification Step: Always review the AI's identification with an editable name field, category badge, and culinary pairing notes before confirming.",
+                "Strict Privacy (Images Never Saved): Captured camera frames are analyzed entirely in volatile memory and immediately recycled — images are never saved to disk or persistent storage.",
+                "Automated Pantry Addition & Shopping List Check-Off: Discovered ingredients can be added directly to your pantry and automatically cross off matching items from your Shopping List.",
+                "Custom Light & Dark Mode Settings: Choose between System Default, crisp Light Mode, and rich Dark Mode gourmet aesthetics from the Settings screen.",
+                "Streamlined Settings Menu: Removed the legacy update button to provide a clean, distraction-free preferences experience."
+            )
+        ),
+        ReleaseNote(
             version = "1.03.00",
             date = "September 03, 2026",
             title = "Smart Barcode Scanner & Pantry Inventory Check-Off",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
-                "Camera-Based Barcode Scanner: Integrated CameraX and ML Kit to scan UPC/EAN barcodes on food packaging with a sleek animated viewfinder, torch control, and haptic response.",
+                "Camera-Based Barcode Scanner: Integrated CameraX and ML Kit to scan UPC/EAN barcodes on food packaging with a sleek animated laser viewfinder and flashlight control.",
                 "Automated Pantry Inventory: Scanned ingredients are immediately added to 'In The House Right Now' pantry storage to power celebrity master chef recipe generation.",
                 "Automated Shopping List Procure & Check-Off: Scanning any ingredient on your shopping list automatically checks it off with instant visual confirmation.",
                 "Offline & Online Hybrid Barcode Engine: Built-in instant database of 30+ everyday grocery staples with graceful OpenFoodFacts cloud fallback lookup.",
@@ -71,8 +96,7 @@ fun WhatsNewScreen(onBack: () -> Unit) {
                 "Integrated Material 3 Circular & Linear progress indicators with animated percentage and culinary stage indicators during Gemini AI generation.",
                 "Built complete Recipe Details system: interactive Cook Mode with built-in Kitchen Timer, dynamic Serving Size scaler, and Macronutrient breakdown.",
                 "Added Custom Recipe Builder allowing users to create, customize, and edit detailed recipes directly.",
-                "Crafted a bespoke visual theme with deep multi-level drop shadows, warm ambient borders, and elevated tactility.",
-                "Integrated automated update checks with Remind Later and Skip Version support."
+                "Crafted a bespoke visual theme with deep multi-level drop shadows, warm ambient borders, and elevated tactility."
             )
         ),
         ReleaseNote(

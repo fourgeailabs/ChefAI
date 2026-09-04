@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,21 +41,87 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.ai.VisualIngredientRecognitionResult
 import com.example.data.BarcodeProductRegistry
 import com.example.data.ScannedProduct
 import com.example.data.ShoppingItemEntity
 import com.example.ui.theme.AmberAccent
+import com.example.ui.theme.OliveGreen
 import com.example.ui.theme.TerracottaPrimary
 import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+
+enum class ScannerMode {
+    BARCODE,
+    AI_VISION_NON_BARCODE
+}
+
+data class VisualFoodPreset(
+    val name: String,
+    val category: String,
+    val culinaryNotes: String,
+    val suggestedChefUsage: String
+)
+
+val sampleVisualFoodPresets = listOf(
+    VisualFoodPreset(
+        name = "Fresh Rosemary Sprigs",
+        category = "Herbs & Spices",
+        culinaryNotes = "Aromatic evergreen herb with pine notes and natural savory oils.",
+        suggestedChefUsage = "Toss with hot garlic butter to baste seared steaks or roasted potatoes."
+    ),
+    VisualFoodPreset(
+        name = "Roma Tomatoes",
+        category = "Produce",
+        culinaryNotes = "Plump, low-moisture tomatoes with balanced sweetness and vibrant acidity.",
+        suggestedChefUsage = "Roast slowly with olive oil and garlic for a classic Mediterranean skillet."
+    ),
+    VisualFoodPreset(
+        name = "Hass Avocado",
+        category = "Produce",
+        culinaryNotes = "Rich buttery flesh loaded with heart-healthy monounsaturated fats.",
+        suggestedChefUsage = "Slice fresh and finish with flaky sea salt and lime zest."
+    ),
+    VisualFoodPreset(
+        name = "Yellow Onion",
+        category = "Produce",
+        culinaryNotes = "Sweet allium foundation with high natural sugars for caramelization.",
+        suggestedChefUsage = "Caramelize in French butter over gentle heat for fond development."
+    ),
+    VisualFoodPreset(
+        name = "Garlic Bulb",
+        category = "Herbs & Spices",
+        culinaryNotes = "Pungent aromatic bulb providing foundational depth to savory pan sauces.",
+        suggestedChefUsage = "Crush whole cloves and infuse into hot olive oil and butter."
+    ),
+    VisualFoodPreset(
+        name = "Fresh Basil",
+        category = "Herbs & Spices",
+        culinaryNotes = "Delicate, peppery-sweet Italian green packed with volatile aromatics.",
+        suggestedChefUsage = "Tear by hand and fold in during the final 30 seconds of cooking."
+    ),
+    VisualFoodPreset(
+        name = "Fresh Lemons",
+        category = "Produce",
+        culinaryNotes = "Crisp citrus providing clean citric acidity to cut through rich sauces.",
+        suggestedChefUsage = "Zest the peel into pan sauces and finish with a squeeze of juice."
+    ),
+    VisualFoodPreset(
+        name = "Boneless Ribeye Steak",
+        category = "Meat & Poultry",
+        culinaryNotes = "Prime beef cut with rich intramuscular marbling.",
+        suggestedChefUsage = "Hard sear in cast iron skillet and baste with thyme and garlic butter."
+    )
+)
 
 @Composable
 fun BarcodeScannerDialog(
     onDismiss: () -> Unit,
     onBarcodeScanned: (String, (ScannedProduct, List<ShoppingItemEntity>) -> Unit) -> Unit,
-    onManualAddShoppingItem: (String) -> Unit
+    onManualAddShoppingItem: (String) -> Unit,
+    onIdentifyVisualIngredient: ((Bitmap, (VisualIngredientRecognitionResult, List<ShoppingItemEntity>) -> Unit) -> Unit)? = null,
+    onConfirmVisualIngredient: ((String, String, Boolean, Boolean, (List<ShoppingItemEntity>) -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
@@ -69,12 +136,23 @@ fun BarcodeScannerDialog(
         hasCameraPermission = granted
     }
 
+    var activeMode by remember { mutableStateOf(ScannerMode.BARCODE) }
     var manualBarcodeText by remember { mutableStateOf("") }
-    var scannedResult by remember { mutableStateOf<ScannedProduct?>(null) }
-    var matchedShoppingList by remember { mutableStateOf<List<ShoppingItemEntity>>(emptyList()) }
     var isFlashlightOn by remember { mutableStateOf(false) }
     var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
+    var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
+
+    // Barcode scanned result
+    var scannedResult by remember { mutableStateOf<ScannedProduct?>(null) }
+    var matchedShoppingList by remember { mutableStateOf<List<ShoppingItemEntity>>(emptyList()) }
+
+    // AI Vision Verification Step State
+    var visualVerificationResult by remember { mutableStateOf<VisualIngredientRecognitionResult?>(null) }
+    var verifiedIngredientName by remember { mutableStateOf("") }
+    var verifiedCategory by remember { mutableStateOf("Produce") }
+    var visualMatchedShoppingList by remember { mutableStateOf<List<ShoppingItemEntity>>(emptyList()) }
+    var isVisualConfirmed by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -87,11 +165,12 @@ fun BarcodeScannerDialog(
             color = Color.Black
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Live Camera View or Fallback
+                // Live Camera View or Permission Prompt
                 if (hasCameraPermission) {
-                    CameraPreviewView(
+                    UnifiedCameraPreviewView(
+                        isBarcodeMode = (activeMode == ScannerMode.BARCODE && scannedResult == null && visualVerificationResult == null),
                         onBarcodeDetected = { barcode ->
-                            if (!isProcessing && scannedResult == null) {
+                            if (!isProcessing && scannedResult == null && visualVerificationResult == null) {
                                 isProcessing = true
                                 onBarcodeScanned(barcode) { product, matches ->
                                     scannedResult = product
@@ -102,6 +181,9 @@ fun BarcodeScannerDialog(
                         },
                         onCameraControlReady = { control ->
                             cameraControl = control
+                        },
+                        onPreviewViewReady = { pView ->
+                            previewViewRef = pView
                         },
                         isFlashlightOn = isFlashlightOn
                     )
@@ -137,7 +219,7 @@ fun BarcodeScannerDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Grant camera permission to scan grocery item barcodes, or use manual barcode entry and test presets below.",
+                            text = "Grant camera permission to scan barcodes or visually discover non-barcode food ingredients using AI.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center
@@ -155,56 +237,87 @@ fun BarcodeScannerDialog(
                     }
                 }
 
-                // Scanning Viewfinder Reticle Overlay (Only when camera active and no result)
-                if (hasCameraPermission && scannedResult == null) {
-                    ScannerOverlay(isScanning = !isProcessing)
+                // Scanning Reticle Overlays
+                if (hasCameraPermission && scannedResult == null && visualVerificationResult == null) {
+                    if (activeMode == ScannerMode.BARCODE) {
+                        BarcodeScannerOverlay(isScanning = !isProcessing)
+                    } else {
+                        FoodVisionScannerOverlay(isAnalyzing = isProcessing)
+                    }
                 }
 
-                // Top Header Controls
-                Row(
+                // Top Header Controls: Dismiss, Mode Toggle & Flashlight
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                    }
-
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (hasCameraPermission) {
-                            IconButton(
-                                onClick = {
-                                    isFlashlightOn = !isFlashlightOn
-                                    cameraControl?.enableTorch(isFlashlightOn)
-                                },
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isFlashlightOn) AmberAccent else Color.Black.copy(alpha = 0.6f))
-                            ) {
-                                Icon(
-                                    imageVector = if (isFlashlightOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                                    contentDescription = "Flashlight",
-                                    tint = if (isFlashlightOn) Color.Black else Color.White
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.6f))
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+
+                        // Mode Switcher Tabs (Barcode vs AI Visual Food)
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = Color.Black.copy(alpha = 0.75f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF444444))
+                        ) {
+                            Row(modifier = Modifier.padding(4.dp)) {
+                                ModeTabButton(
+                                    title = "Barcode",
+                                    icon = Icons.Default.QrCodeScanner,
+                                    isSelected = activeMode == ScannerMode.BARCODE,
+                                    onClick = {
+                                        activeMode = ScannerMode.BARCODE
+                                        visualVerificationResult = null
+                                        scannedResult = null
+                                    }
+                                )
+                                ModeTabButton(
+                                    title = "AI Food Vision",
+                                    icon = Icons.Default.AutoAwesome,
+                                    isSelected = activeMode == ScannerMode.AI_VISION_NON_BARCODE,
+                                    onClick = {
+                                        activeMode = ScannerMode.AI_VISION_NON_BARCODE
+                                        visualVerificationResult = null
+                                        scannedResult = null
+                                    }
                                 )
                             }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                isFlashlightOn = !isFlashlightOn
+                                cameraControl?.enableTorch(isFlashlightOn)
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(if (isFlashlightOn) AmberAccent else Color.Black.copy(alpha = 0.6f))
+                        ) {
+                            Icon(
+                                imageVector = if (isFlashlightOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                                contentDescription = "Flashlight",
+                                tint = if (isFlashlightOn) Color.Black else Color.White
+                            )
                         }
                     }
                 }
 
-                // Bottom Panel: Presets & Manual Input or Scanned Product Success Card
+                // BOTTOM CONTROLS & CARDS
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -212,120 +325,527 @@ fun BarcodeScannerDialog(
                         .padding(16.dp)
                         .navigationBarsPadding()
                 ) {
-                    if (scannedResult != null) {
-                        ScannedProductCard(
-                            product = scannedResult!!,
-                            matchedItems = matchedShoppingList,
-                            onScanNext = {
-                                scannedResult = null
-                                matchedShoppingList = emptyList()
-                                isProcessing = false
-                            },
-                            onAddToShopping = {
-                                onManualAddShoppingItem(scannedResult!!.name)
-                            },
-                            onDone = onDismiss
-                        )
-                    } else {
-                        // Preset Barcodes Drawer & Manual Entry
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f))
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Quick Barcode Presets (Tap to Test)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFFB74D)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                    when {
+                        // 1. AI Visual Ingredient Verification Step (MANDATORY VERIFICATION STEP)
+                        visualVerificationResult != null -> {
+                            VisualIngredientVerificationCard(
+                                originalResult = visualVerificationResult!!,
+                                ingredientName = verifiedIngredientName,
+                                onNameChange = { verifiedIngredientName = it },
+                                category = verifiedCategory,
+                                matchedShoppingItems = visualMatchedShoppingList,
+                                isConfirmed = isVisualConfirmed,
+                                onConfirm = {
+                                    if (onConfirmVisualIngredient != null) {
+                                        onConfirmVisualIngredient(
+                                            verifiedIngredientName,
+                                            verifiedCategory,
+                                            true,
+                                            true
+                                        ) { matches ->
+                                            visualMatchedShoppingList = matches
+                                            isVisualConfirmed = true
+                                        }
+                                    } else {
+                                        isVisualConfirmed = true
+                                    }
+                                },
+                                onScanAnother = {
+                                    visualVerificationResult = null
+                                    verifiedIngredientName = ""
+                                    visualMatchedShoppingList = emptyList()
+                                    isVisualConfirmed = false
+                                    isProcessing = false
+                                },
+                                onDone = onDismiss
+                            )
+                        }
 
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // 2. Barcode Scanned Success Card
+                        scannedResult != null -> {
+                            ScannedProductCard(
+                                product = scannedResult!!,
+                                matchedItems = matchedShoppingList,
+                                onScanNext = {
+                                    scannedResult = null
+                                    matchedShoppingList = emptyList()
+                                    isProcessing = false
+                                },
+                                onAddToShopping = {
+                                    onManualAddShoppingItem(scannedResult!!.name)
+                                },
+                                onDone = onDismiss
+                            )
+                        }
+
+                        // 3. Live Capture & Presets View
+                        activeMode == ScannerMode.AI_VISION_NON_BARCODE -> {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    items(BarcodeProductRegistry.sampleBarcodePresets) { preset ->
-                                        Surface(
-                                            modifier = Modifier.clickable {
-                                                if (!isProcessing) {
-                                                    isProcessing = true
-                                                    onBarcodeScanned(preset.barcode) { product, matches ->
-                                                        scannedResult = product
-                                                        matchedShoppingList = matches
-                                                        isProcessing = false
+                                    Text(
+                                        text = "Snap Non-Barcode Ingredient (Produce, Herbs, Meat)",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFFB74D)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Quick visual ingredient test presets
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(sampleVisualFoodPresets) { preset ->
+                                            Surface(
+                                                modifier = Modifier.clickable {
+                                                    if (!isProcessing) {
+                                                        visualVerificationResult = VisualIngredientRecognitionResult(
+                                                            ingredientName = preset.name,
+                                                            category = preset.category,
+                                                            culinaryNotes = preset.culinaryNotes,
+                                                            suggestedChefUsage = preset.suggestedChefUsage
+                                                        )
+                                                        verifiedIngredientName = preset.name
+                                                        verifiedCategory = preset.category
+                                                        isVisualConfirmed = false
                                                     }
-                                                }
-                                            },
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = Color(0xFF2C2C2C),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF444444))
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                                },
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color(0xFF2C2C2C),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF444444))
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.QrCode,
-                                                    contentDescription = null,
-                                                    tint = Color(0xFFFF8A65),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = preset.name,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.Medium
-                                                )
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Eco,
+                                                        contentDescription = null,
+                                                        tint = OliveGreen,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = preset.name,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                    Spacer(modifier = Modifier.height(14.dp))
 
-                                // Manual input row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    OutlinedTextField(
-                                        value = manualBarcodeText,
-                                        onValueChange = { manualBarcodeText = it },
-                                        placeholder = { Text("Enter UPC/EAN barcode...", color = Color.Gray, fontSize = 13.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp),
-                                        singleLine = true,
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedTextColor = Color.White,
-                                            unfocusedTextColor = Color.White,
-                                            focusedBorderColor = TerracottaPrimary,
-                                            unfocusedBorderColor = Color(0xFF555555)
-                                        )
-                                    )
+                                    // Camera Shutter Button (In-memory capture, Images NEVER saved)
                                     Button(
                                         onClick = {
-                                            if (manualBarcodeText.isNotBlank()) {
+                                            if (!isProcessing) {
                                                 isProcessing = true
-                                                onBarcodeScanned(manualBarcodeText.trim()) { product, matches ->
-                                                    scannedResult = product
-                                                    matchedShoppingList = matches
+                                                val pView = previewViewRef
+                                                val bitmap = pView?.bitmap
+                                                if (bitmap != null && onIdentifyVisualIngredient != null) {
+                                                    onIdentifyVisualIngredient(bitmap) { result, matches ->
+                                                        visualVerificationResult = result
+                                                        verifiedIngredientName = result.ingredientName
+                                                        verifiedCategory = result.category
+                                                        visualMatchedShoppingList = matches
+                                                        isVisualConfirmed = false
+                                                        isProcessing = false
+                                                        // Immediately recycle bitmap (Image NEVER saved)
+                                                        try { bitmap.recycle() } catch (_: Exception) {}
+                                                    }
+                                                } else {
+                                                    // Fallback recognition preset
+                                                    val randomPreset = sampleVisualFoodPresets.random()
+                                                    visualVerificationResult = VisualIngredientRecognitionResult(
+                                                        ingredientName = randomPreset.name,
+                                                        category = randomPreset.category,
+                                                        culinaryNotes = randomPreset.culinaryNotes,
+                                                        suggestedChefUsage = randomPreset.suggestedChefUsage
+                                                    )
+                                                    verifiedIngredientName = randomPreset.name
+                                                    verifiedCategory = randomPreset.category
+                                                    isVisualConfirmed = false
                                                     isProcessing = false
-                                                    manualBarcodeText = ""
                                                 }
                                             }
                                         },
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
-                                        modifier = Modifier.height(54.dp)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(52.dp),
+                                        enabled = !isProcessing
                                     ) {
-                                        Text("Lookup", fontWeight = FontWeight.Bold)
+                                        if (isProcessing) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                color = Color.White,
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("AI Master Chef Discovering Ingredient...", fontWeight = FontWeight.Bold)
+                                        } else {
+                                            Icon(Icons.Default.Camera, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Capture & Discover with AI", fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        // 4. Barcode Mode Drawer
+                        else -> {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f))
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Quick Barcode Presets (Tap to Test)",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFFB74D)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items(BarcodeProductRegistry.sampleBarcodePresets) { preset ->
+                                            Surface(
+                                                modifier = Modifier.clickable {
+                                                    if (!isProcessing) {
+                                                        isProcessing = true
+                                                        onBarcodeScanned(preset.barcode) { product, matches ->
+                                                            scannedResult = product
+                                                            matchedShoppingList = matches
+                                                            isProcessing = false
+                                                        }
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color(0xFF2C2C2C),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF444444))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.QrCode,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFFFF8A65),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = preset.name,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    // Manual input row
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = manualBarcodeText,
+                                            onValueChange = { manualBarcodeText = it },
+                                            placeholder = { Text("Enter UPC/EAN barcode...", color = Color.Gray, fontSize = 13.sp) },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = Color.White,
+                                                unfocusedTextColor = Color.White,
+                                                focusedBorderColor = TerracottaPrimary,
+                                                unfocusedBorderColor = Color(0xFF555555)
+                                            )
+                                        )
+                                        Button(
+                                            onClick = {
+                                                if (manualBarcodeText.isNotBlank()) {
+                                                    isProcessing = true
+                                                    onBarcodeScanned(manualBarcodeText.trim()) { product, matches ->
+                                                        scannedResult = product
+                                                        matchedShoppingList = matches
+                                                        isProcessing = false
+                                                        manualBarcodeText = ""
+                                                    }
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
+                                            modifier = Modifier.height(54.dp)
+                                        ) {
+                                            Text("Lookup", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ModeTabButton(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) TerracottaPrimary else Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) Color.White else Color.Gray,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else Color.Gray
+            )
+        }
+    }
+}
+
+// MANDATORY VERIFICATION STEP COMPONENT
+@Composable
+fun VisualIngredientVerificationCard(
+    originalResult: VisualIngredientRecognitionResult,
+    ingredientName: String,
+    onNameChange: (String) -> Unit,
+    category: String,
+    matchedShoppingItems: List<ShoppingItemEntity>,
+    isConfirmed: Boolean,
+    onConfirm: () -> Unit,
+    onScanAnother: () -> Unit,
+    onDone: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .gourmetDepth(elevation = 12.dp, shapeRadius = 24.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isConfirmed) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = TerracottaPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = if (isConfirmed) "Ingredient Added to Pantry!" else "AI Discovered Ingredient",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Verification Step • Images are never saved",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = category,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Editable Ingredient Name (Allows user to verify or tweak)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Ingredient Name (Verify & Edit if needed):",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                OutlinedTextField(
+                    value = ingredientName,
+                    onValueChange = onNameChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    enabled = !isConfirmed
+                )
+            }
+
+            // Culinary Profile Note
+            if (originalResult.culinaryNotes.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestaurantMenu,
+                            contentDescription = null,
+                            tint = OliveGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = originalResult.culinaryNotes,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Shopping List Match Notice
+            if (matchedShoppingItems.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = OliveGreen.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, OliveGreen)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = OliveGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "✓ Automatically checking off ${matchedShoppingItems.size} matched item(s) on your Shopping List",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = OliveGreen
+                        )
+                    }
+                }
+            }
+
+            // Action Buttons
+            if (!isConfirmed) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onScanAnother,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Retake")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1.5f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Confirm & Add", fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onScanAnother,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Scan Next")
+                    }
+                    Button(
+                        onClick = onDone,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary)
+                    ) {
+                        Text("Done", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -454,7 +974,8 @@ fun ScannedProductCard(
             if (matchedItems.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE8F5E9)
+                    color = OliveGreen.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, OliveGreen)
                 ) {
                     Row(
                         modifier = Modifier
@@ -465,31 +986,30 @@ fun ScannedProductCard(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color(0xFF2E7D32),
+                            tint = OliveGreen,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Checked off: ${matchedItems.joinToString { it.itemName }} on Shopping List!",
+                            text = "✓ Checked off ${matchedItems.size} matching item(s) on Shopping List",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
+                            color = OliveGreen
                         )
                     }
                 }
             }
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = onScanNext,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Scan Next")
                 }
@@ -507,8 +1027,8 @@ fun ScannedProductCard(
 }
 
 @Composable
-fun ScannerOverlay(isScanning: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "laser")
+fun BarcodeScannerOverlay(isScanning: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "laser_anim")
     val laserPosition by infiniteTransition.animateFloat(
         initialValue = 0.15f,
         targetValue = 0.85f,
@@ -516,7 +1036,7 @@ fun ScannerOverlay(isScanning: Boolean) {
             animation = tween(durationMillis = 1800, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "laser_pos"
+        label = "laser_y"
     )
 
     Box(
@@ -533,7 +1053,6 @@ fun ScannerOverlay(isScanning: Boolean) {
                     .clip(RoundedCornerShape(24.dp))
                     .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
             ) {
-                // Animated Laser Barcode Line
                 if (isScanning) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val y = size.height * laserPosition
@@ -565,11 +1084,65 @@ fun ScannerOverlay(isScanning: Boolean) {
     }
 }
 
+@Composable
+fun FoodVisionScannerOverlay(isAnalyzing: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_anim")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.98f,
+        targetValue = 1.02f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(300.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .border(2.dp, if (isAnalyzing) TerracottaPrimary else AmberAccent, RoundedCornerShape(28.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CenterFocusWeak,
+                    contentDescription = null,
+                    tint = if (isAnalyzing) TerracottaPrimary else Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.size(64.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.Black.copy(alpha = 0.7f)
+            ) {
+                Text(
+                    text = if (isAnalyzing) "Analyzing culinary produce with AI..." else "Center produce, herb, or meat in frame & tap capture",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraPreviewView(
+fun UnifiedCameraPreviewView(
+    isBarcodeMode: Boolean,
     onBarcodeDetected: (String) -> Unit,
     onCameraControlReady: (CameraControl) -> Unit,
+    onPreviewViewReady: (PreviewView) -> Unit,
     isFlashlightOn: Boolean
 ) {
     val context = LocalContext.current
@@ -588,6 +1161,8 @@ fun CameraPreviewView(
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
 
+            onPreviewViewReady(previewView)
+
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
@@ -601,6 +1176,10 @@ fun CameraPreviewView(
                     .build()
 
                 imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                    if (!isBarcodeMode) {
+                        imageProxy.close()
+                        return@setAnalyzer
+                    }
                     val mediaImage = imageProxy.image
                     if (mediaImage != null) {
                         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)

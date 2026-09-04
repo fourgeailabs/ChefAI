@@ -1,26 +1,45 @@
 # ChefAI Studio
 
-**ChefAI Studio** is a premier, AI-powered gourmet culinary discovery, recipe builder, and cooking assistant application built for Android using Kotlin and Jetpack Compose. Developed by **FourgeAI LABS**.
+**ChefAI Studio** is a premier, AI-powered gourmet culinary discovery, recipe builder, visual ingredient scanner, and cooking assistant application built for Android using Kotlin and Jetpack Compose. Developed by **FourgeAI LABS**.
 
 ## Features & Highlights
 
+- **Animated Gourmet Splash & Loading Screen (NEW)**: Immersive startup screen with a pulsing glowing chef emblem, live progress counter, and status tracking as it connects to internet services and calibrates GPS locale data.
+- **GPS Locale & Regional Supermarket Pricing Engine (NEW)**: Real-time location integration that collects GPS coordinates to determine the user's city/locale, calculates regional produce price indexes, and recommends nearby supermarket deals (ALDI, Trader Joe's, Local Farmer's Co-Op, Whole Foods).
+- **AI Camera Vision for Non-Barcode Ingredients**: Use the camera to snap and discover loose produce, fresh garden herbs, cuts of meat, seafood, cheeses, spices, and bulk grocery items without barcodes using Gemini AI multimodal vision.
+- **Mandatory Interactive Verification Step**: Every visual scan presents an interactive verification card where users can verify or edit the detected ingredient name, review culinary notes and chef pairing advice, see automatic shopping list matches, and confirm pantry addition.
+- **Strict Zero-Storage Privacy Architecture**: In-memory camera frame analysis only (`previewView.bitmap`). Images are immediately processed in volatile RAM and dereferenced/recycled. Images are **never** saved to device storage or persistent cache.
+- **Custom Light & Dark Appearance Modes**: Seamless toggle between System Default, crisp Light Mode (warm culinary canvas), and rich Dark Mode (charcoal & terracotta aesthetic) in the Settings menu.
 - **Smart Barcode Scanner & Pantry Procure Engine**: Camera-based barcode scanner powered by CameraX and ML Kit with live viewfinder reticle, animated laser sweep, torch toggle, and haptic feedback to scan ingredient barcodes, automatically stock your "In The House" pantry, and check off items on your shopping list in real-time.
-- **Offline & Cloud Hybrid Barcode Database**: Pre-indexed offline database of 30+ everyday grocery staples with seamless OpenFoodFacts cloud API fallback.
 - **Celebrity Master Chef AI Generation**: Channel the authentic culinary philosophy, signature searing, French reductions, rustic street soul, farm scratch baking, 30-minute speed, and smoky Southwestern grill styles of **Gordon Ramsay**, **Julia Child**, **Anthony Bourdain**, **Martha Stewart**, **Rachael Ray**, and **Bobby Flay**.
 - **Cravings Engine**: Tailor recipe creations to specific cravings ("Crispy & Savory", "Warm & Comforting", "Smoky & Spicy", "Rich & Decadent", "Fresh & Zesty", "Sweet & Tangy", "Fast 30-Min Feast") or freeform custom cravings.
-- **"In The House Right Now" Smart Pantry Synthesis**: Real-time recipe formulation taking what the user has in their kitchen (with 1-tap common pantry staples and scanned barcode items) and synthesizing iconic meals.
+- **"In The House Right Now" Smart Pantry Synthesis**: Real-time recipe formulation taking what the user has in their kitchen (with 1-tap common pantry staples, visual produce scans, and scanned barcode items) and synthesizing iconic meals.
 - **Material 3 Progress Indicators**: Visual progress indicators (Circular & Linear) with live percentage counters, culinary stage progression, and chef tips while awaiting Gemini API responses.
 - **Rich Recipe Details & Chef Badges**: Comprehensive recipe information including chef quotes, technique breakdowns, cook/prep timings, macronutrient breakdown (protein, carbs, fat), and dynamic serving scale adjusters.
 - **Interactive Step-by-Step Cook Mode**: Guided cooking flow with step progress indicators, large readable typography, and an interactive built-in Kitchen Timer (Start, Pause, Reset, +1 Min).
 - **Custom Recipe Builder**: Create, build, and edit recipes directly with customizable fields and nutritional facts.
 - **Deep Multi-Level Depth & Shadows**: Bespoke visual design with warm terracotta & amber culinary palette, multi-tiered drop shadows, ambient glow borders, and layered surfaces.
 - **Saved Cookbook with Chef Filtering**: Offline local SQLite persistence powered by Android Jetpack Room Database with filter-by-chef capability.
-- **Smart Pantry & Shopping List**: Dual-tab view for Active Shopping List and Scanned Pantry Inventory, one-tap ingredient import from any recipe, interactive check-off states, and barcode scanner shortcuts.
-- **Settings & What's New**: Expandable historical release changelogs with accordion dropdowns, automated update checks, and direct links to FourgeAI LABS.
+- **Smart Pantry & Shopping List**: Dual-tab view for Active Shopping List and Scanned Pantry Inventory, one-tap ingredient import from any recipe, interactive check-off states, and barcode / camera vision shortcuts.
+- **Settings & What's New**: Expandable historical release changelogs with accordion dropdowns, theme appearance picker, and direct links to FourgeAI LABS.
 
 ## Release History
 
-### Current Version: `1.03.00` (Build 4) — September 03, 2026
+### Current Version: `1.05.00` (Build 6) — September 03, 2026
+- **Animated Gourmet Splash & Loading Screen**: Dynamic startup experience featuring a glowing chef insignia and progress tracking while connecting to cloud services and GPS.
+- **GPS Locale & Local Supermarket Pricing Engine**: Collects GPS coordinates to determine city and regional produce index multiplier, ensuring accurate budget calculations and local deals.
+- **Local Supermarket Deals & Value Hubs**: Direct access to nearest grocery deals (ALDI, Trader Joe's, Local Co-op, Whole Foods) with live distances and price tier indicators.
+- **Pantry & Shopping Screen Locale Integration**: Real-time market pricing banner with manual GPS recalibration button.
+- **GitHub Actions Signing Pipeline Fix**: Fully resilient keystore restoration from base64 with automated keytool generation fallback, ensuring zero `validateSigningDebug` failures in CI.
+
+### Version: `1.04.00` (Build 5) — September 03, 2026
+- **AI Camera Vision for Non-Barcode Produce**: Use live camera framing to discover loose produce, fresh herbs, cuts of meat, seafood, and spices with Gemini AI multimodal vision.
+- **Mandatory Verification Step**: Review, edit/rename, and confirm discovered ingredients before adding to pantry or checking off shopping list items.
+- **Strict Zero-Storage Privacy**: Camera frames are processed strictly in volatile RAM and immediately recycled; images are never written or saved to disk.
+- **Light & Dark Theme Setting**: Added selectable theme mode switcher (System Default, Light Mode, Dark Mode) to Settings.
+- **Settings Screen Streamline**: Removed legacy update checking button for a focused, distraction-free preferences experience.
+
+### Version: `1.03.00` (Build 4) — September 03, 2026
 - **Smart Barcode Scanner for Ingredients**: Live CameraX + ML Kit barcode reader with animated viewfinder laser, torch switch, test presets, and manual UPC entry.
 - **Instant Pantry Inventory Stocking**: Scanned grocery products are automatically added to the SQLite pantry database and live "In The House Right Now" recipe synthesizer.
 - **Automated Shopping List Check-Off**: Scanning ingredients automatically recognizes matching items on the user's shopping list and marks them as procured with visual confirmation.
@@ -38,20 +57,16 @@
 - **Comprehensive Recipe Details**: Added Cook Mode with Kitchen Timer, Serving Size Scaler (1 to 8 servings), and Macronutrient breakdown meters.
 - **Custom Recipe Builder**: Added dialog to build and edit recipes from scratch.
 - **Multi-Level Tactile Depth**: Enhanced theme with custom elevated drop shadows, ambient glow borders, and gourmet color system.
-- **Auto-Update Scanner**: Added check-for-updates system with "Remind for later" and "Skip this version" dialog options.
 
 ### Version: `1.00.00` (Build 1) — August 29, 2026
 - Initial release of ChefAI Studio with AI generator, Room Database persistence, and shopping list.
 
 ## CI/CD & Build Workflow
 - **GitHub Actions (`build.yml`)**: Automated CI/CD workflow builds debug and release APKs upon push, pull request, manual dispatch, and releases.
-- **Keystore Persistence**: Restores `debug.keystore` from `debug.keystore.base64` to preserve signing credentials and guarantee continuous APK upgrade compatibility across builds.
+- **Keystore Persistence**: Restores `debug.keystore` from `debug.keystore.base64` or creates a keytool fallback to preserve signing credentials and guarantee continuous APK upgrade compatibility across builds.
 - **Release Automation**: Automatically publishes APK assets to GitHub Releases.
 
 ## Creator & Repository
-- **App Creator**: [FourgeAI LABS](https://github.com/fourgeailabs)
-- **GitHub Repository**: [https://github.com/fourgeailabs/chefai](https://github.com/fourgeailabs/chefai)
+- **Creator**: [FourgeAI LABS](https://github.com/fourgeailabs)
 - **Application ID**: `com.fourgeailabs.chefai`
-
-## License
-MIT License - Developed by FourgeAI LABS.
+- **Repository URL**: `https://github.com/fourgeailabs/chefai`

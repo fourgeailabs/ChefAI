@@ -97,6 +97,22 @@ fun GenerateScreen(
             },
             onManualAddShoppingItem = { name ->
                 viewModel.addShoppingItem(name)
+            },
+            onIdentifyVisualIngredient = { bitmap, onResult ->
+                viewModel.identifyVisualIngredient(bitmap, onResult)
+            },
+            onConfirmVisualIngredient = { ingredientName, category, autoPantry, autoShopping, onConfirmed ->
+                viewModel.confirmVisualIngredient(
+                    ingredientName = ingredientName,
+                    category = category,
+                    autoAddToPantry = autoPantry,
+                    autoCheckShoppingList = autoShopping
+                ) { matchedShopping ->
+                    if (!ingredientsInput.contains(ingredientName, ignoreCase = true)) {
+                        ingredientsInput = if (ingredientsInput.isBlank()) ingredientName else "$ingredientsInput, $ingredientName"
+                    }
+                    onConfirmed(matchedShopping)
+                }
             }
         )
     }

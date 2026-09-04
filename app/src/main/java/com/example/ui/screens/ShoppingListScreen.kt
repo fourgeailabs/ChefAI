@@ -40,6 +40,9 @@ fun ShoppingListScreen(viewModel: ChefViewModel) {
     var newItemName by remember { mutableStateOf("") }
     var showBarcodeScanner by remember { mutableStateOf(false) }
     var lastScannedNotification by remember { mutableStateOf<String?>(null) }
+    var showDealsExpanded by remember { mutableStateOf(false) }
+
+    val localePricing by viewModel.localePricingData.collectAsState()
 
     val checkedCount = shoppingItems.count { it.isChecked }
     val totalCount = shoppingItems.size
@@ -63,6 +66,24 @@ fun ShoppingListScreen(viewModel: ChefViewModel) {
             },
             onManualAddShoppingItem = { name ->
                 viewModel.addShoppingItem(name)
+            },
+            onIdentifyVisualIngredient = { bitmap, onResult ->
+                viewModel.identifyVisualIngredient(bitmap, onResult)
+            },
+            onConfirmVisualIngredient = { ingredientName, category, autoPantry, autoShopping, onConfirmed ->
+                viewModel.confirmVisualIngredient(
+                    ingredientName = ingredientName,
+                    category = category,
+                    autoAddToPantry = autoPantry,
+                    autoCheckShoppingList = autoShopping
+                ) { matchedShopping ->
+                    if (matchedShopping.isNotEmpty()) {
+                        lastScannedNotification = "✓ Discovered & Checked off ${matchedShopping.size} item(s): $ingredientName"
+                    } else {
+                        lastScannedNotification = "✓ Added '$ingredientName' to Pantry"
+                    }
+                    onConfirmed(matchedShopping)
+                }
             }
         )
     }
@@ -159,6 +180,146 @@ fun ShoppingListScreen(viewModel: ChefViewModel) {
                                 tint = Color(0xFF2E7D32),
                                 modifier = Modifier.size(16.dp)
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // GPS Local Market Pricing Intelligence Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+                .gourmetDepth(elevation = 4.dp, shapeRadius = 14.dp, hasBorderGlow = false)
+                .clickable { showDealsExpanded = !showDealsExpanded },
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (localePricing.isGpsActive) Color(0xFF4CAF50).copy(alpha = 0.2f) else AmberAccent.copy(alpha = 0.2f),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = if (localePricing.isGpsActive) Color(0xFF2E7D32) else TerracottaPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = localePricing.locationName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = "${localePricing.priceIndexMultiplier}x Index",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${localePricing.statusMessage} • Tap to view store deals",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.refreshLocalePricing() },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh GPS",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = showDealsExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Text(
+                            text = "Nearby Supermarkets & Recommended Value Hubs",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        localePricing.nearbyDeals.forEach { deal ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = deal.storeName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = deal.dealTag,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            text = "${deal.distanceMiles} mi • ${deal.priceTier}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
