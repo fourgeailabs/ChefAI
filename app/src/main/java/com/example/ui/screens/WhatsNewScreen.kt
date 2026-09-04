@@ -35,10 +35,22 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.06.00",
+            date = "September 03, 2026",
+            title = "Gradle Wrapper & CI/CD Pipeline Build Fix",
+            isLatest = true,
+            highlights = listOf(
+                "Gradle Wrapper (gradlew) Script Integration: Added standard root gradlew executable with automated wrapper bootstrap and direct Gradle delegation.",
+                "GitHub Actions setup-gradle Action: Upgraded CI workflow with gradle/actions/setup-gradle@v4 and Gradle 9.3.1 for automated runner environment provisioning.",
+                "Universal Fallback Execution: Supports ./gradlew assembleDebug and gradle assembleDebug seamlessly across local and cloud CI/CD runners.",
+                "Zero-Failure APK Release Workflow: Guaranteed artifact export and GitHub Releases upload without binary missing errors."
+            )
+        ),
+        ReleaseNote(
             version = "1.05.00",
             date = "September 03, 2026",
             title = "Loading Screen, GPS Locale & Supermarket Pricing Engine",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "Animated Gourmet Splash & Loading Screen: Beautiful startup screen featuring a glowing chef emblem, pulse animations, and real-time cloud service & GPS connection progress.",
                 "GPS Locale & Market Pricing Intelligence: Automatically detects user city and calculates regional produce price indexes to ensure the best local grocery pricing.",

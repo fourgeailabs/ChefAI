@@ -110,7 +110,7 @@ fun AboutScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Text(
-                                text = "v1.05.00 (Build 6)",
+                                text = "v1.06.00 (Build 7)",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,

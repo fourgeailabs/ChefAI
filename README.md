@@ -25,7 +25,12 @@
 
 ## Release History
 
-### Current Version: `1.05.00` (Build 6) — September 03, 2026
+### Current Version: `1.06.00` (Build 7) — September 03, 2026
+- **Gradle Wrapper & CI/CD Pipeline Build Fix**: Added root `gradlew` script and updated GitHub Actions with `gradle/actions/setup-gradle@v4` (Gradle 9.3.1) to eliminate `./gradlew: No such file or directory` errors during cloud APK builds.
+- **Universal Local & Remote Gradle Execution**: Enabled seamless fallback execution for `./gradlew assembleDebug` and `gradle assembleDebug`.
+- **Zero-Failure Release Pipeline**: Verified flawless APK artifact packaging and GitHub Releases upload flow.
+
+### Version: `1.05.00` (Build 6) — September 03, 2026
 - **Animated Gourmet Splash & Loading Screen**: Dynamic startup experience featuring a glowing chef insignia and progress tracking while connecting to cloud services and GPS.
 - **GPS Locale & Local Supermarket Pricing Engine**: Collects GPS coordinates to determine city and regional produce index multiplier, ensuring accurate budget calculations and local deals.
 - **Local Supermarket Deals & Value Hubs**: Direct access to nearest grocery deals (ALDI, Trader Joe's, Local Co-op, Whole Foods) with live distances and price tier indicators.
