@@ -360,7 +360,6 @@ fun ShoppingListScreen(viewModel: ChefViewModel) {
         }
 
         Spacer(modifier = Modifier.height(14.dp))
-
         if (selectedTab == 0) {
             // SHOPPING LIST TAB
             // Input Card
@@ -405,7 +404,6 @@ fun ShoppingListScreen(viewModel: ChefViewModel) {
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-
             if (shoppingItems.isEmpty()) {
                 Card(
                     modifier = Modifier

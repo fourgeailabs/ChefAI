@@ -52,7 +52,8 @@ fun RecipeDetailScreen(
     onBack: () -> Unit
 ) {
     val recipes by viewModel.allRecipes.collectAsState()
-    val recipe = recipes.find { it.id == recipeId }
+    val unsavedRecipe by viewModel.unsavedRecipe.collectAsState()
+    val recipe = if (recipeId == -1L) unsavedRecipe else recipes.find { it.id == recipeId }
     val context = LocalContext.current
 
     var servingMultiplier by remember { mutableIntStateOf(recipe?.servings ?: 4) }
@@ -192,6 +193,25 @@ fun RecipeDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                if (recipeId == -1L) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = { viewModel.saveRecipeToCookbook(recipe) { onBack() } }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)) { Text("Save to Cookbook") }
+                        OutlinedButton(onClick = { onBack() }, modifier = Modifier.weight(1f)) { Text("Try Again") }
+                    }
+                }
+
+                if (recipeId == -1L) {
+                    var hasSaved by remember { mutableStateOf(false) }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (!hasSaved) {
+                            Button(onClick = { viewModel.saveRecipeToCookbook(recipe!!) { hasSaved = true } }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)) { Text("Save to Cookbook") }
+                        } else {
+                            Button(onClick = { }, modifier = Modifier.weight(1f), enabled = false) { Text("Saved!") }
+                        }
+                        OutlinedButton(onClick = { onBack() }, modifier = Modifier.weight(1f)) { Text("Try Again") }
+                    }
+                }
+
                 // Completed Meal Appearance from Chef's Cookbook
                 Card(
                     modifier = Modifier
@@ -862,6 +882,7 @@ fun RecipeDetailScreen(
         }
     }
 }
+
 
 @Composable
 fun InfoPill(icon: ImageVector, text: String) {

@@ -109,6 +109,8 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _progressState = MutableStateFlow(GenerationProgressState())
+    private val _unsavedRecipe = MutableStateFlow<RecipeEntity?>(null)
+    val unsavedRecipe: StateFlow<RecipeEntity?> = _unsavedRecipe.asStateFlow()
     val progressState: StateFlow<GenerationProgressState> = _progressState.asStateFlow()
 
     init {
@@ -229,7 +231,7 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun searchAndSaveRecipe(
+    fun searchRecipe(
         query: String,
         preferredChef: String? = null,
         servings: Int = 4,
@@ -292,14 +294,15 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
                 platePresentation = generated.platePresentation,
                 isFavorite = true
             )
-            val id = dao.insertRecipe(recipeEntity)
+            _unsavedRecipe.value = recipeEntity
+            val id = -1L
             delay(200)
             _progressState.value = GenerationProgressState(isGenerating = false)
             onComplete(id)
         }
     }
 
-    fun generateAndSaveRecipe(
+    fun generateRecipe(
         chef: String,
         craving: String,
         ingredients: String,
@@ -369,7 +372,8 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
                 platePresentation = generated.platePresentation,
                 isFavorite = true
             )
-            val id = dao.insertRecipe(recipeEntity)
+            _unsavedRecipe.value = recipeEntity
+            val id = -1L
             delay(200)
             _progressState.value = GenerationProgressState(isGenerating = false)
             onComplete(id)
@@ -377,6 +381,13 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun buildAndSaveCustomRecipe(recipe: RecipeEntity, onComplete: (Long) -> Unit) {
+        viewModelScope.launch {
+            val id = dao.insertRecipe(recipe)
+            onComplete(id)
+        }
+    }
+
+    fun saveRecipeToCookbook(recipe: RecipeEntity, onComplete: (Long) -> Unit) {
         viewModelScope.launch {
             val id = dao.insertRecipe(recipe)
             onComplete(id)

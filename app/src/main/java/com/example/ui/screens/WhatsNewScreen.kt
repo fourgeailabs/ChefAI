@@ -35,10 +35,24 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.10.00",
+            date = "September 04, 2026",
+            title = "Privacy GPS, Shopping Optimization & Settings Expansion",
+            isLatest = true,
+            highlights = listOf(
+                "Manual Saving & Feedback System: Recipes are no longer auto-saved. Explicitly save them to your cookbook and use the thumbs up/down feedback slider.",
+                "Settings Menus Expanded: Toggle Exact vs Approximate GPS privacy, Ingredient Brand preferences (Name vs Store), and edit household allergies & history.",
+                "Shopping List Intelligence: Top banner computes the overall cheapest grocery store for your complete shopping list across a 15-mile radius.",
+                "Recommended Discover Section: Highlights curated AI recipe suggestions based explicitly on your completed cooking history.",
+                "UI Polish: Streamlined portion steppers, Master Chef dropdown menus, and enhanced formatting for all data fields."
+            )
+        ),
+
+        ReleaseNote(
             version = "1.09.00",
             date = "September 04, 2026",
             title = "Gemini AI Search Bar, Celebrity Chef Bios & Cookbook Meal Visuals",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "Gemini API Recipe Search Bar: Dedicated search bar at the top of the main screen allowing users to search recipes or ask Gemini AI to create any dish in seconds, with instant suggestions.",
                 "Guy Fieri Joins the Roster: Added Guy Fieri as a featured celebrity chef with bold Flavortown recipes, techniques, and culinary style.",

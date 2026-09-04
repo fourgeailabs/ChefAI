@@ -387,11 +387,16 @@ class GeminiRecipeService {
                 difficulty = "Medium",
                 chefTip = "Don't overcomplicate good food. Respect the ingredients, embrace the pan drippings, and finish with good Dijon mustard and cold butter.",
                 ingredients = "$cleanIng, 2 Shallots (sliced), 1 tbsp Dijon Mustard, 1/3 cup Rich Stock, 2 tbsp Butter, Coarse Sea Salt, Chopped Flat-Leaf Parsley",
-                instructions = "1. Season your protein heavily with coarse salt and black pepper—don't be shy.\n" +
-                        "2. Get your pan genuinely hot with olive oil and sear hard until deeply browned and caramelized on all sides.\n" +
-                        "3. Toss in sliced shallots around the perimeter and let them soften and sweeten in the rendered drippings.\n" +
-                        "4. Deglaze the hot pan with stock and a dollop of sharp Dijon mustard, swirling vigorously to create a soul-satisfying bistro jus.\n" +
-                        "5. Pull off heat, swirl in a knob of cold butter, scatter flat-leaf parsley, and serve with rustic bread or pan potatoes.",
+                instructions = """1. PREP THE STATION: Sharpen your knife. Slice the shallots thin and gather your mise en place.
+2. SEASON AGGRESSIVELY: Liberally coat your main ingredients with coarse sea salt and freshly cracked black pepper. Don't be shy.
+3. GET IT SMOKING: Heat a cast-iron skillet until it is punishingly hot. Add a glug of neutral oil.
+4. HARD SEAR: Drop the ingredients in. Listen to the sizzle. Leave them alone to build a righteous crust (about 4 mins).
+5. THE FLIP: Turn the ingredients over. Marvel at the golden-brown Maillard reaction.
+6. SWEETEN THE POT: Toss the sliced shallots into the rendered fat around the edges of the pan.
+7. DEGLAZE WITH ATTITUDE: Pour in the rich stock and a heavy spoonful of Dijon mustard. Scrape the bottom of the pan vigorously with a wooden spoon.
+8. REDUCE & MOUNT: Let the liquid bubble and reduce by half. Kill the heat. Vigorously swirl in cold butter to mount the sauce into a glossy glaze.
+9. REST THE MEAT: Let the main ingredient rest on a board for 5-7 minutes. If you cut it now, you ruin it.
+10. SERVE RUSTIC: Plate the dish unapologetically. Drown it in the mustard-shallot jus and shower with chopped flat-leaf parsley.""",
                 cuisine = cuisine,
                 dietary = dietary,
                 chefInspiration = "Anthony Bourdain",

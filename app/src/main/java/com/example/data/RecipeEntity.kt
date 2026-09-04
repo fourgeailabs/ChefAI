@@ -27,5 +27,6 @@ data class RecipeEntity(
     val imageUrl: String = "",
     val platePresentation: String = "",
     val isFavorite: Boolean = false,
+    val rating: Float = 0.5f,
     val timestamp: Long = System.currentTimeMillis()
 )

@@ -1,0 +1,2 @@
+sed -i 's/val recipes by viewModel.allRecipes.collectAsState()/val recipes by viewModel.allRecipes.collectAsState()\n    val unsavedRecipe by viewModel.unsavedRecipe.collectAsState()/' app/src/main/java/com/example/ui/screens/RecipeDetailScreen.kt
+sed -i 's/val recipe = recipes.find { it.id == recipeId }/val recipe = if (recipeId == -1L) unsavedRecipe else recipes.find { it.id == recipeId }/' app/src/main/java/com/example/ui/screens/RecipeDetailScreen.kt

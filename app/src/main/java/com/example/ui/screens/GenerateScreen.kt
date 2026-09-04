@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -195,7 +196,7 @@ fun GenerateScreen(
                                     IconButton(
                                         onClick = {
                                             if (searchQuery.isNotBlank()) {
-                                                viewModel.searchAndSaveRecipe(
+                                                viewModel.searchRecipe(
                                                     query = searchQuery.trim(),
                                                     preferredChef = selectedChef.name,
                                                     servings = selectedPortions
@@ -232,7 +233,7 @@ fun GenerateScreen(
                             keyboardActions = KeyboardActions(
                                 onSearch = {
                                     if (searchQuery.isNotBlank()) {
-                                        viewModel.searchAndSaveRecipe(
+                                        viewModel.searchRecipe(
                                             query = searchQuery.trim(),
                                             preferredChef = selectedChef.name,
                                             servings = selectedPortions
@@ -249,7 +250,7 @@ fun GenerateScreen(
                             Column(modifier = Modifier.padding(top = 10.dp)) {
                                 Button(
                                     onClick = {
-                                        viewModel.searchAndSaveRecipe(
+                                        viewModel.searchRecipe(
                                             query = searchQuery.trim(),
                                             preferredChef = selectedChef.name,
                                             servings = selectedPortions
@@ -326,7 +327,7 @@ fun GenerateScreen(
                                     color = MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier.clickable {
                                         searchQuery = cleanQuery
-                                        viewModel.searchAndSaveRecipe(
+                                        viewModel.searchRecipe(
                                             query = cleanQuery,
                                             preferredChef = selectedChef.name,
                                             servings = selectedPortions
@@ -429,6 +430,49 @@ fun GenerateScreen(
                 }
             }
 
+
+            // RECOMMENDED FOR YOU (Based on completed recipes)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Recommended for You",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Based on your history of completed recipes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) {
+                        val recommendations = listOf(
+                            "Smoky Cedar Plank Salmon",
+                            "Tuscan Garlic Butter Steak",
+                            "Lemon Herb Roast Chicken",
+                            "Rich Mushroom Risotto"
+                        )
+                        items(recommendations) { rec ->
+                            Card(
+                                modifier = Modifier.width(160.dp).height(100.dp).clickable {
+                                    searchQuery = rec
+                                    viewModel.searchRecipe(rec, selectedChef.name, selectedPortions) { onRecipeClick(it) }
+                                }.gourmetDepth(elevation = 4.dp, shapeRadius = 12.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+                                    Text(rec, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // SECTION 1: SELECT CELEBRITY MASTER CHEF
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -458,18 +502,48 @@ fun GenerateScreen(
                         )
                     }
 
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    var expanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        items(CelebrityChefRegistry.allChefs) { chef ->
-                            val isSelected = selectedChef.id == chef.id
-                            CelebrityChefCard(
-                                chef = chef,
-                                isSelected = isSelected,
-                                onClick = { selectedChef = chef },
-                                onImageClick = { showBioChef = chef }
-                            )
+                        OutlinedTextField(
+                            value = selectedChef.name,
+                            onValueChange = {},
+                            readOnly = true,
+                            leadingIcon = {
+                                IconButton(onClick = { showBioChef = selectedChef }) {
+                                    Icon(Icons.Default.Info, contentDescription = "Chef Biography", tint = selectedChef.accentColor)
+                                }
+                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            CelebrityChefRegistry.allChefs.forEach { chef ->
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            Surface(shape = CircleShape, color = chef.accentColor, modifier = Modifier.size(32.dp)) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text(text = chef.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString(""), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                }
+                                            }
+                                            Text(text = chef.name, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedChef = chef
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -775,35 +849,23 @@ fun GenerateScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
                                 ) {
-                                    IconButton(
-                                        onClick = { if (selectedPortions > 1) selectedPortions -= 1 },
-                                        enabled = selectedPortions > 1,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(Icons.Default.Remove, contentDescription = "Decrease Portions", modifier = Modifier.size(18.dp))
-                                    }
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { if (selectedPortions > 1) selectedPortions -= 1 }, modifier = Modifier.size(36.dp)) {
+                                            Icon(Icons.Default.Remove, contentDescription = "Decrease Portions", tint = MaterialTheme.colorScheme.primary)
+                                        }
                                         Text(
                                             text = "$selectedPortions ${if (selectedPortions == 1) "portion" else "portions"}",
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
-                                    }
-                                    IconButton(
-                                        onClick = { if (selectedPortions < 50) selectedPortions += 1 },
-                                        enabled = selectedPortions < 50,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = "Increase Portions", modifier = Modifier.size(18.dp))
+                                        IconButton(onClick = { if (selectedPortions < 50) selectedPortions += 1 }, modifier = Modifier.size(36.dp)) {
+                                            Icon(Icons.Default.Add, contentDescription = "Increase Portions", tint = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }
@@ -828,7 +890,7 @@ fun GenerateScreen(
                         val activeCraving = customCraving.ifBlank { selectedCraving }
                         Button(
                             onClick = {
-                                viewModel.generateAndSaveRecipe(
+                                viewModel.generateRecipe(
                                     chef = selectedChef.name,
                                     craving = activeCraving,
                                     ingredients = ingredientsInput.ifBlank { "Eggs, butter, garlic, olive oil, cracked pepper, pantry staples" },
