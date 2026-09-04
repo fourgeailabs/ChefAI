@@ -81,14 +81,14 @@ fun SettingsScreen(
         SettingsItem(
             icon = Icons.Default.SystemUpdate,
             title = "Check for Updates",
-            subtitle = if (updateState.isChecking) "Checking GitHub Releases..." else "Current Version v1.02.00",
+            subtitle = if (updateState.isChecking) "Checking GitHub Releases..." else "Current Version v1.03.00",
             onClick = { viewModel.checkForUpdates(isManual = true) }
         )
 
         SettingsItem(
             icon = Icons.Default.NewReleases,
             title = "What's New",
-            subtitle = "Release notes for v1.02.00 & historical changelog",
+            subtitle = "Release notes for v1.03.00 & historical changelog",
             onClick = onNavigateWhatsNew
         )
 
@@ -102,7 +102,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "ChefAI Studio v1.02.00 • Master Chef Culinary Engine",
+            text = "ChefAI Studio v1.03.00 • Master Chef Culinary Engine",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.align(Alignment.CenterHorizontally)

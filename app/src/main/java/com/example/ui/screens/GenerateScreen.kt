@@ -29,6 +29,7 @@ import com.example.data.CelebrityChef
 import com.example.data.CelebrityChefRegistry
 import com.example.data.RecipeEntity
 import com.example.ui.ChefViewModel
+import com.example.ui.components.BarcodeScannerDialog
 import com.example.ui.components.BuildRecipeDialog
 import com.example.ui.components.GeminiProgressModal
 import com.example.ui.components.gourmetButtonShadow
@@ -50,6 +51,7 @@ fun GenerateScreen(
     var selectedDietary by remember { mutableStateOf("None") }
     var selectedCuisine by remember { mutableStateOf("Chef's Specialty") }
     var showBuildDialog by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
 
     val cravingOptions = listOf(
         "Crispy & Savory",
@@ -71,10 +73,33 @@ fun GenerateScreen(
     val dietaryOptions = listOf("None", "High Protein", "Keto", "Vegetarian", "Vegan", "Gluten-Free", "Low Carb")
 
     val recipes by viewModel.allRecipes.collectAsState()
+    val pantryItems by viewModel.pantryItems.collectAsState()
     val progressState by viewModel.progressState.collectAsState()
 
     // Gemini API Loading Modal with Progress & Stage Tracker
     GeminiProgressModal(progressState = progressState)
+
+    if (showBarcodeScanner) {
+        BarcodeScannerDialog(
+            onDismiss = { showBarcodeScanner = false },
+            onBarcodeScanned = { barcode, onProcessed ->
+                viewModel.processBarcode(
+                    barcode = barcode,
+                    autoAddToPantry = true,
+                    autoCheckShoppingList = true
+                ) { product, matchedList ->
+                    // Auto append scanned ingredient to the In-The-House prompt
+                    if (!ingredientsInput.contains(product.name, ignoreCase = true)) {
+                        ingredientsInput = if (ingredientsInput.isBlank()) product.name else "$ingredientsInput, ${product.name}"
+                    }
+                    onProcessed(product, matchedList)
+                }
+            },
+            onManualAddShoppingItem = { name ->
+                viewModel.addShoppingItem(name)
+            }
+        )
+    }
 
     if (showBuildDialog) {
         BuildRecipeDialog(
@@ -293,7 +318,7 @@ fun GenerateScreen(
                 }
             }
 
-            // SECTION 3: WHAT'S IN THE HOUSE? (PANTRY INVENTORY)
+            // SECTION 3: WHAT'S IN THE HOUSE? (PANTRY INVENTORY & BARCODE SCANNER)
             item {
                 Card(
                     modifier = Modifier
@@ -306,19 +331,36 @@ fun GenerateScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Kitchen,
-                                contentDescription = null,
-                                tint = TerracottaPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "3. What's in the house right now?",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Kitchen,
+                                    contentDescription = null,
+                                    tint = TerracottaPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "3. In The House Right Now",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // 1-Tap Barcode Scanner Button
+                            FilledTonalButton(
+                                onClick = { showBarcodeScanner = true },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Scan Barcode", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
 
                         OutlinedTextField(
@@ -337,10 +379,75 @@ fun GenerateScreen(
                             }
                         )
 
+                        // Scanned Pantry Items if available
+                        if (pantryItems.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Scanned Pantry Inventory (${pantryItems.size}):",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TerracottaPrimary
+                                    )
+                                    TextButton(
+                                        onClick = {
+                                            val pantryNames = pantryItems.map { it.name }
+                                            val newItems = pantryNames.filter { !ingredientsInput.contains(it, ignoreCase = true) }
+                                            if (newItems.isNotEmpty()) {
+                                                ingredientsInput = if (ingredientsInput.isBlank()) {
+                                                    newItems.joinToString(", ")
+                                                } else {
+                                                    "$ingredientsInput, ${newItems.joinToString(", ")}"
+                                                }
+                                            }
+                                        },
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text("+ Add All to Prompt", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    pantryItems.forEach { pantryItem ->
+                                        val isAdded = ingredientsInput.contains(pantryItem.name, ignoreCase = true)
+                                        FilterChip(
+                                            selected = isAdded,
+                                            onClick = {
+                                                if (isAdded) {
+                                                    // Remove from input
+                                                    ingredientsInput = ingredientsInput
+                                                        .split(",")
+                                                        .map { it.trim() }
+                                                        .filter { !it.equals(pantryItem.name, ignoreCase = true) }
+                                                        .joinToString(", ")
+                                                } else {
+                                                    ingredientsInput = if (ingredientsInput.isBlank()) pantryItem.name else "$ingredientsInput, ${pantryItem.name}"
+                                                }
+                                            },
+                                            label = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(12.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(pantryItem.name, fontSize = 11.sp)
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         // Quick-tap common household staples
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Tap to add household staples you have:",
+                                text = "Or tap common household staples:",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -42,4 +42,19 @@ interface ChefDao {
 
     @Query("DELETE FROM shopping_items")
     suspend fun clearShoppingList()
+
+    @Query("SELECT * FROM pantry_items ORDER BY addedDate DESC")
+    fun getAllPantryItems(): Flow<List<PantryItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPantryItem(item: PantryItemEntity): Long
+
+    @Delete
+    suspend fun deletePantryItem(item: PantryItemEntity)
+
+    @Query("DELETE FROM pantry_items")
+    suspend fun clearPantry()
+
+    @Query("SELECT * FROM pantry_items WHERE barcode = :barcode LIMIT 1")
+    suspend fun getPantryItemByBarcode(barcode: String): PantryItemEntity?
 }

@@ -37,10 +37,23 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.03.00",
+            date = "September 03, 2026",
+            title = "Smart Barcode Scanner & Pantry Inventory Check-Off",
+            isLatest = true,
+            highlights = listOf(
+                "Camera-Based Barcode Scanner: Integrated CameraX and ML Kit to scan UPC/EAN barcodes on food packaging with a sleek animated viewfinder, torch control, and haptic response.",
+                "Automated Pantry Inventory: Scanned ingredients are immediately added to 'In The House Right Now' pantry storage to power celebrity master chef recipe generation.",
+                "Automated Shopping List Procure & Check-Off: Scanning any ingredient on your shopping list automatically checks it off with instant visual confirmation.",
+                "Offline & Online Hybrid Barcode Engine: Built-in instant database of 30+ everyday grocery staples with graceful OpenFoodFacts cloud fallback lookup.",
+                "Quick Test Presets & Manual UPC Entry: 1-tap tester presets and manual barcode input for fast testing without physical packaging."
+            )
+        ),
+        ReleaseNote(
             version = "1.02.00",
             date = "September 03, 2026",
             title = "Celebrity Master Chefs, Cravings & Pantry Intelligence",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "Celebrity Master Chef AI Personas: Pull meals inspired by culinary icons Gordon Ramsay, Julia Child, Anthony Bourdain, Martha Stewart, Rachael Ray, and Bobby Flay.",
                 "Cravings Engine: Select or type exactly what you crave (Crispy & Savory, Warm & Comforting, Smoky & Spicy, Rich & Decadent, Fresh & Zesty, Sweet & Tangy, 30-Min Fast Comfort).",

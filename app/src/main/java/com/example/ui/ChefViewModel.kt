@@ -29,8 +29,8 @@ data class UpdateCheckState(
     val isChecking: Boolean = false,
     val isUpdateAvailable: Boolean = false,
     val showDialog: Boolean = false,
-    val latestVersion: String = "1.02.00",
-    val currentVersion: String = "1.02.00",
+    val latestVersion: String = "1.03.00",
+    val currentVersion: String = "1.03.00",
     val releaseNotes: String = ""
 )
 
@@ -45,6 +45,9 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val shoppingItems: StateFlow<List<ShoppingItemEntity>> = dao.getAllShoppingItems()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val pantryItems: StateFlow<List<com.example.data.PantryItemEntity>> = dao.getAllPantryItems()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _progressState = MutableStateFlow(GenerationProgressState())
@@ -260,6 +263,75 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Pantry Management
+    fun addPantryItem(name: String, barcode: String = "", brand: String = "", category: String = "Pantry") {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            dao.insertPantryItem(
+                com.example.data.PantryItemEntity(
+                    name = name.trim(),
+                    barcode = barcode.trim(),
+                    brand = brand.trim(),
+                    category = category.trim()
+                )
+            )
+        }
+    }
+
+    fun deletePantryItem(item: com.example.data.PantryItemEntity) {
+        viewModelScope.launch {
+            dao.deletePantryItem(item)
+        }
+    }
+
+    fun clearPantry() {
+        viewModelScope.launch {
+            dao.clearPantry()
+        }
+    }
+
+    // Barcode Scanner Engine: Lookup, Add to Pantry, and Auto-Check Shopping List
+    fun processBarcode(
+        barcode: String,
+        autoAddToPantry: Boolean = true,
+        autoCheckShoppingList: Boolean = true,
+        onProcessed: (com.example.data.ScannedProduct, List<ShoppingItemEntity>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val product = com.example.data.BarcodeProductRegistry.lookupProduct(barcode)
+            
+            // 1. Add to Pantry if requested
+            if (autoAddToPantry) {
+                dao.insertPantryItem(
+                    com.example.data.PantryItemEntity(
+                        name = product.name,
+                        barcode = product.barcode,
+                        brand = product.brand,
+                        category = product.category
+                    )
+                )
+            }
+
+            // 2. Find and check off matching shopping items
+            val currentShopping = shoppingItems.value
+            val currentNames = currentShopping.map { it.itemName }
+            val matchedNames = com.example.data.BarcodeProductRegistry.findMatchingShoppingItems(product.name, currentNames)
+            
+            val matchedEntities = currentShopping.filter { it.itemName in matchedNames }
+
+            if (autoCheckShoppingList && matchedEntities.isNotEmpty()) {
+                for (item in matchedEntities) {
+                    if (!item.isChecked) {
+                        dao.updateShoppingItem(item.copy(isChecked = true))
+                    }
+                }
+            }
+
+            val productWithMatches = product.copy(matchedShoppingItems = matchedNames)
+            onProcessed(productWithMatches, matchedEntities)
+        }
+    }
+
     // Auto-update check simulation
     fun checkForUpdates(isManual: Boolean = false) {
         viewModelScope.launch {
@@ -267,11 +339,11 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
             delay(1200) // Simulated network check to GitHub Releases API
             _updateState.value = UpdateCheckState(
                 isChecking = false,
-                isUpdateAvailable = false, // We are on latest 1.02.00
+                isUpdateAvailable = false, // We are on latest 1.03.00
                 showDialog = isManual,
-                currentVersion = "1.02.00",
-                latestVersion = "1.02.00",
-                releaseNotes = "Version 1.02.00 is installed with the Celebrity Master Chef AI Engine (Gordon Ramsay, Julia Child, Anthony Bourdain, Martha Stewart, Rachael Ray, Bobby Flay), Cravings Selector, and In-the-House Pantry Intelligence."
+                currentVersion = "1.03.00",
+                latestVersion = "1.03.00",
+                releaseNotes = "Version 1.03.00 includes the Smart Barcode Scanner with live Camera viewfinder, instant pantry addition, and automated shopping list item check-off."
             )
         }
     }
