@@ -1,0 +1,238 @@
+package com.example.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.ui.components.gourmetDepth
+import com.example.ui.theme.TerracottaPrimary
+
+data class ReleaseNote(
+    val version: String,
+    val date: String,
+    val title: String,
+    val isLatest: Boolean = false,
+    val highlights: List<String>
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WhatsNewScreen(onBack: () -> Unit) {
+    val releases = listOf(
+        ReleaseNote(
+            version = "1.02.00",
+            date = "September 03, 2026",
+            title = "Celebrity Master Chefs, Cravings & Pantry Intelligence",
+            isLatest = true,
+            highlights = listOf(
+                "Celebrity Master Chef AI Personas: Pull meals inspired by culinary icons Gordon Ramsay, Julia Child, Anthony Bourdain, Martha Stewart, Rachael Ray, and Bobby Flay.",
+                "Cravings Engine: Select or type exactly what you crave (Crispy & Savory, Warm & Comforting, Smoky & Spicy, Rich & Decadent, Fresh & Zesty, Sweet & Tangy, 30-Min Fast Comfort).",
+                "'In The House Right Now' Pantry Synthesis: Generate gourmet chef-inspired meals using ingredients and staples already in your kitchen.",
+                "Chef Quotes & Signature Technique Badges: Recipe details now showcase master chef philosophies, technique secrets, and craving indicators.",
+                "Chef Filtered Cookbook: Organize and filter your saved recipes by individual celebrity master chef or view all."
+            )
+        ),
+        ReleaseNote(
+            version = "1.01.00",
+            date = "September 03, 2026",
+            title = "Visual Depth, Recipe Details & Material 3 Progress",
+            isLatest = false,
+            highlights = listOf(
+                "Integrated Material 3 Circular & Linear progress indicators with animated percentage and culinary stage indicators during Gemini AI generation.",
+                "Built complete Recipe Details system: interactive Cook Mode with built-in Kitchen Timer, dynamic Serving Size scaler, and Macronutrient breakdown.",
+                "Added Custom Recipe Builder allowing users to create, customize, and edit detailed recipes directly.",
+                "Crafted a bespoke visual theme with deep multi-level drop shadows, warm ambient borders, and elevated tactility.",
+                "Integrated automated update checks with Remind Later and Skip Version support."
+            )
+        ),
+        ReleaseNote(
+            version = "1.00.00",
+            date = "August 29, 2026",
+            title = "Initial Release of ChefAI Studio",
+            isLatest = false,
+            highlights = listOf(
+                "AI-powered recipe generation using Gemini AI with cuisine and dietary customization.",
+                "Local offline Room database persistence for saved favorite recipes.",
+                "Interactive smart shopping list with check-off status and one-tap ingredient import.",
+                "Complete Material 3 UI with cards and dark theme support."
+            )
+        ),
+        ReleaseNote(
+            version = "0.90.00",
+            date = "August 15, 2026",
+            title = "Beta Preview & UI Polish",
+            isLatest = false,
+            highlights = listOf(
+                "Added multi-tab bottom navigation for Discover, Saved Recipes, Shopping List, and Settings.",
+                "Implemented Gemini AI prompt fallback mechanics for seamless offline usage.",
+                "Added recipe preparation timers and calorie estimation tags."
+            )
+        )
+    )
+
+    // Starts closed (null), opens on user interaction closing previously opened one
+    var expandedVersion by remember { mutableStateOf<String?>(null) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("What's New", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                Text(
+                    text = "Release History & Updates",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tap any release below to expand details. Each dropdown starts closed and automatically collapses previously opened entries.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            items(releases) { release ->
+                val isExpanded = expandedVersion == release.version
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gourmetDepth(elevation = 6.dp, shapeRadius = 18.dp)
+                        .clickable {
+                            expandedVersion = if (isExpanded) null else release.version
+                        },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "v${release.version}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (release.isLatest) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Text(
+                                                text = "CURRENT",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "${release.title} • ${release.date}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    expandedVersion = if (isExpanded) null else release.version
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                release.highlights.forEach { highlight ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = TerracottaPrimary,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .padding(top = 2.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = highlight,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            lineHeight = 20.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

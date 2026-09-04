@@ -1,0 +1,6 @@
+{
+  "name": "ChefAI Studio",
+  "description": "AI-Powered Recipe Discovery & Cooking Assistant",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
