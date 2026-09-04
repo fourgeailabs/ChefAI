@@ -32,7 +32,8 @@ class GeminiRecipeService {
         craving: String,
         ingredientsInput: String,
         dietary: String,
-        cuisine: String
+        cuisine: String,
+        servings: Int = 4
     ): GeneratedRecipe = withContext(Dispatchers.IO) {
         val chefObj = CelebrityChefRegistry.getChefByName(chef)
         try {
@@ -46,8 +47,9 @@ class GeminiRecipeService {
                 Dietary Restriction / Preference: "$dietary".
                 Preferred Cuisine Profile: "$cuisine".
                 Ingredients the user has in the house right now: "$ingredientsInput".
+                Target Yield / Portion Size: $servings portions (calculate ingredient amounts and nutritional facts specifically for $servings portions).
                 
-                Task: Create a mouthwatering, restaurant-worthy recipe that embodies ${chefObj.name}'s signature cooking style and technique, perfectly satisfies the craving for "$craving", complies strictly with the dietary preference "$dietary", and creatively utilizes the ingredients the user already has in the house (with basic pantry staples like salt, pepper, butter, oil, or spices as needed).
+                Task: Create a mouthwatering, restaurant-worthy recipe that embodies ${chefObj.name}'s signature cooking style and technique, perfectly satisfies the craving for "$craving", complies strictly with the dietary preference "$dietary", scales ingredient portions appropriately for $servings people, and creatively utilizes the ingredients the user already has in the house (with basic pantry staples like salt, pepper, butter, oil, or spices as needed).
                 
                 Respond in this exact structured format:
                 TITLE: [Appetizing Recipe Title in ${chefObj.name}'s style]
@@ -57,11 +59,11 @@ class GeminiRecipeService {
                 PROTEIN: [e.g. 32g]
                 CARBS: [e.g. 45g]
                 FAT: [e.g. 16g]
-                SERVINGS: [e.g. 4]
+                SERVINGS: $servings
                 DIFFICULTY: [Easy / Medium / Master Chef]
                 CHEF_TIP: [${chefObj.name}'s signature pro-tip for executing this dish flawlessly]
                 CHEF_QUOTE: [An authentic, inspiring culinary quote in ${chefObj.name}'s voice]
-                INGREDIENTS: [Comma-separated ingredient list with measurements based on what the user has in the house]
+                INGREDIENTS: [Comma-separated ingredient list with measurements scaled for $servings portions based on what the user has in the house]
                 INSTRUCTIONS:
                 1. [Detailed Step 1 emphasizing ${chefObj.name}'s technique]
                 2. [Detailed Step 2]
@@ -71,11 +73,11 @@ class GeminiRecipeService {
             """.trimIndent()
 
             val response = model.generateContent(prompt)
-            val text = response.text ?: return@withContext getFallbackRecipe(chef, craving, ingredientsInput, dietary, cuisine)
+            val text = response.text ?: return@withContext getFallbackRecipe(chef, craving, ingredientsInput, dietary, cuisine, servings)
 
-            parseResponse(text, chef, craving, cuisine, dietary)
+            parseResponse(text, chef, craving, cuisine, dietary, defaultServings = servings)
         } catch (e: Exception) {
-            getFallbackRecipe(chef, craving, ingredientsInput, dietary, cuisine)
+            getFallbackRecipe(chef, craving, ingredientsInput, dietary, cuisine, servings)
         }
     }
 
@@ -84,7 +86,8 @@ class GeminiRecipeService {
         chef: String,
         craving: String,
         cuisine: String,
-        dietary: String
+        dietary: String,
+        defaultServings: Int = 4
     ): GeneratedRecipe {
         val chefObj = CelebrityChefRegistry.getChefByName(chef)
         var title = "${chefObj.name}'s Signature $cuisine Skillet"
@@ -94,7 +97,7 @@ class GeminiRecipeService {
         var protein = "34g"
         var carbs = "42g"
         var fat = "18g"
-        var servings = 4
+        var servings = defaultServings
         var difficulty = "Medium"
         var chefTip = chefObj.signatureTechnique
         var chefQuote = chefObj.quote
@@ -118,7 +121,7 @@ class GeminiRecipeService {
                     line.startsWith("FAT:", ignoreCase = true) -> fat = line.substringAfter(":").trim()
                     line.startsWith("SERVINGS:", ignoreCase = true) -> {
                         val numStr = line.substringAfter(":").filter { it.isDigit() }
-                        servings = numStr.toIntOrNull() ?: 4
+                        servings = numStr.toIntOrNull() ?: defaultServings
                     }
                     line.startsWith("DIFFICULTY:", ignoreCase = true) -> difficulty = line.substringAfter(":").trim()
                     line.startsWith("CHEF_TIP:", ignoreCase = true) -> chefTip = line.substringAfter(":").trim()
@@ -162,7 +165,8 @@ class GeminiRecipeService {
         craving: String,
         ingredients: String,
         dietary: String,
-        cuisine: String
+        cuisine: String,
+        servings: Int = 4
     ): GeneratedRecipe {
         val chefObj = CelebrityChefRegistry.getChefByName(chef)
         val cleanIng = if (ingredients.isNotBlank()) ingredients else "Chicken breast, garlic, olive oil, baby spinach, parmesan"

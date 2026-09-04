@@ -50,6 +50,7 @@ fun GenerateScreen(
     var ingredientsInput by remember { mutableStateOf("") }
     var selectedDietary by remember { mutableStateOf("None") }
     var selectedCuisine by remember { mutableStateOf("Chef's Specialty") }
+    var selectedPortions by remember { mutableIntStateOf(4) }
     var showBuildDialog by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
 
@@ -554,6 +555,66 @@ fun GenerateScreen(
                             }
                         }
 
+                        // Target Portion / Servings Yield
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Target Yield / Portion Size:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    IconButton(
+                                        onClick = { if (selectedPortions > 1) selectedPortions -= 1 },
+                                        enabled = selectedPortions > 1,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease Portions", modifier = Modifier.size(18.dp))
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Text(
+                                            text = "$selectedPortions ${if (selectedPortions == 1) "portion" else "portions"}",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { if (selectedPortions < 50) selectedPortions += 1 },
+                                        enabled = selectedPortions < 50,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase Portions", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+
+                            // Quick Portion Presets
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val portionPresets = listOf(1 to "1 (Solo)", 2 to "2 (Couple)", 4 to "4 (Family)", 6 to "6 (Party)", 8 to "8 (Feast)", 12 to "12 (Crowd)")
+                                items(portionPresets) { (count, label) ->
+                                    FilterChip(
+                                        selected = selectedPortions == count,
+                                        onClick = { selectedPortions = count },
+                                        label = { Text(label, fontSize = 11.sp) },
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(4.dp))
 
                         // GENERATE BUTTON
@@ -565,7 +626,8 @@ fun GenerateScreen(
                                     craving = activeCraving,
                                     ingredients = ingredientsInput.ifBlank { "Eggs, butter, garlic, olive oil, cracked pepper, pantry staples" },
                                     dietary = selectedDietary,
-                                    cuisine = selectedCuisine
+                                    cuisine = selectedCuisine,
+                                    servings = selectedPortions
                                 ) { newId ->
                                     onRecipeClick(newId)
                                 }

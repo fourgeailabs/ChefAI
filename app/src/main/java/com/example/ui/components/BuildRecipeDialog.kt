@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -177,6 +178,64 @@ fun BuildRecipeDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         )
+                    }
+
+                    // Servings / Portion Yield Stepper & Presets
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Serving Yield / Portions:",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { if (servings > 1) servings -= 1 },
+                                    enabled = servings > 1,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Servings", modifier = Modifier.size(18.dp))
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = "$servings ${if (servings == 1) "portion" else "portions"}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { if (servings < 50) servings += 1 },
+                                    enabled = servings < 50,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase Servings", modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val presets = listOf(1 to "1 (Solo)", 2 to "2 (Couple)", 4 to "4 (Family)", 6 to "6 (Party)", 8 to "8 (Feast)", 12 to "12 (Crowd)")
+                            items(presets) { (count, label) ->
+                                FilterChip(
+                                    selected = servings == count,
+                                    onClick = { servings = count },
+                                    label = { Text(label, fontSize = 11.sp) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
                     }
 
                     Row(

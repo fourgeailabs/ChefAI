@@ -35,10 +35,32 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.08.00",
+            date = "September 03, 2026",
+            title = "Camera Viewport Scrollability & Dynamic Portion Size Scaling",
+            isLatest = true,
+            highlights = listOf(
+                "Scrollable Camera Section: Added smooth vertical scrolling and visual drag handles to the AI Camera & Barcode Scanner bottom cards, ensuring all actions and recognition details are fully visible on any screen size or orientation.",
+                "Bidirectional Portion Size Scaling: Users can now freely increase or decrease portion sizes (from 1 solo portion up to 100 catering portions) with quick presets (Solo, Couple, Family, Party, Feast, Crowd, Catering).",
+                "Full-Chain Recipe Scaler: Portion sizes are seamlessly passed to the Gemini AI recipe generator, dynamic detail view scaler, and custom recipe builder.",
+                "Polished Category Fallbacks: Enhanced produce and pantry classification display ensuring clean labels across all scanned goods."
+            )
+        ),
+        ReleaseNote(
+            version = "1.07.00",
+            date = "September 03, 2026",
+            title = "CI/CD Pipeline Build Fix & Portions Engine",
+            isLatest = false,
+            highlights = listOf(
+                "GitHub Actions Setup: Upgraded setup-gradle action to v4 with Gradle 9.3.1 for reliable automated cloud compilation.",
+                "Portion Size Calculation Core: Integrated AI prompt instructions for scaling ingredient weights, volumes, and nutritional macros according to custom servings."
+            )
+        ),
+        ReleaseNote(
             version = "1.06.00",
             date = "September 03, 2026",
             title = "Gradle Wrapper & CI/CD Pipeline Build Fix",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "Gradle Wrapper (gradlew) Script Integration: Added standard root gradlew executable with automated wrapper bootstrap and direct Gradle delegation.",
                 "GitHub Actions setup-gradle Action: Upgraded CI workflow with gradle/actions/setup-gradle@v4 and Gradle 9.3.1 for automated runner environment provisioning.",

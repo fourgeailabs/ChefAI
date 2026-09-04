@@ -16,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -381,14 +383,29 @@ fun BarcodeScannerDialog(
                         // 3. Live Capture & Presets View
                         activeMode == ScannerMode.AI_VISION_NON_BARCODE -> {
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 480.dp),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f))
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(16.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    // Drag handle
+                                    Box(
+                                        modifier = Modifier
+                                            .width(36.dp)
+                                            .height(4.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Gray.copy(alpha = 0.4f))
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
                                     Text(
                                         text = "Snap Non-Barcode Ingredient (Produce, Herbs, Meat)",
                                         style = MaterialTheme.typography.labelMedium,
@@ -507,11 +524,29 @@ fun BarcodeScannerDialog(
                         // 4. Barcode Mode Drawer
                         else -> {
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 480.dp),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f))
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    // Drag handle
+                                    Box(
+                                        modifier = Modifier
+                                            .width(36.dp)
+                                            .height(4.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Gray.copy(alpha = 0.4f))
+                                            .align(Alignment.CenterHorizontally)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
                                     Text(
                                         text = "Quick Barcode Presets (Tap to Test)",
                                         style = MaterialTheme.typography.labelMedium,
@@ -658,25 +693,48 @@ fun VisualIngredientVerificationCard(
     onScanAnother: () -> Unit,
     onDone: () -> Unit
 ) {
+    val displayCategory = remember(category) {
+        if (category.isBlank() || category.equals("undefined", ignoreCase = true) || category.equals("null", ignoreCase = true)) {
+            "Fresh Produce"
+        } else {
+            category
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .gourmetDepth(elevation = 12.dp, shapeRadius = 24.dp),
+            .heightIn(max = 540.dp)
+            .gourmetDepth(elevation = 14.dp, shapeRadius = 24.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Drag Handle & Scroll Indicator
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                    .align(Alignment.CenterHorizontally)
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -700,7 +758,7 @@ fun VisualIngredientVerificationCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Verification Step • Images are never saved",
+                            text = "Verification Step • Images never saved",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -712,7 +770,7 @@ fun VisualIngredientVerificationCard(
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Text(
-                        text = category,
+                        text = displayCategory,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -799,10 +857,14 @@ fun VisualIngredientVerificationCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             // Action Buttons
             if (!isConfirmed) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
@@ -827,7 +889,9 @@ fun VisualIngredientVerificationCard(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
@@ -861,25 +925,48 @@ fun ScannedProductCard(
     onAddToShopping: () -> Unit,
     onDone: () -> Unit
 ) {
+    val displayCategory = remember(product.category) {
+        if (product.category.isBlank() || product.category.equals("undefined", ignoreCase = true) || product.category.equals("null", ignoreCase = true)) {
+            "Pantry Item"
+        } else {
+            product.category
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .gourmetDepth(elevation = 12.dp, shapeRadius = 24.dp),
+            .heightIn(max = 540.dp)
+            .gourmetDepth(elevation = 14.dp, shapeRadius = 24.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Drag Handle & Scroll Indicator
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                    .align(Alignment.CenterHorizontally)
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -915,7 +1002,7 @@ fun ScannedProductCard(
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Text(
-                        text = product.category,
+                        text = displayCategory,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -1000,8 +1087,12 @@ fun ScannedProductCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(

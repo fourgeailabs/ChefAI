@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -356,52 +358,71 @@ fun RecipeDetailScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column {
-                            Text(
-                                text = "Serving Size",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Adjust ingredient quantities dynamically",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
-                                onClick = { if (servingMultiplier > 1) servingMultiplier -= 1 },
-                                enabled = servingMultiplier > 1
-                            ) {
-                                Icon(Icons.Default.Remove, contentDescription = "Decrease")
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
+                            Column {
                                 Text(
-                                    text = "$servingMultiplier portions",
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    text = "Serving Size & Portion Scaling",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Dynamic ingredient scaling ($servingMultiplier ${if (servingMultiplier == 1) "portion" else "portions"})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            IconButton(
-                                onClick = { if (servingMultiplier < 12) servingMultiplier += 1 },
-                                enabled = servingMultiplier < 12
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = "Increase")
+                                IconButton(
+                                    onClick = { if (servingMultiplier > 1) servingMultiplier -= 1 },
+                                    enabled = servingMultiplier > 1
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = "$servingMultiplier portions",
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { if (servingMultiplier < 100) servingMultiplier += 1 },
+                                    enabled = servingMultiplier < 100
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase")
+                                }
+                            }
+                        }
+
+                        // Quick Scale Preset Chips
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val presets = listOf(1 to "1 (Solo)", 2 to "2 (Couple)", 4 to "4 (Family)", 6 to "6 (Party)", 8 to "8 (Feast)", 12 to "12 (Crowd)", 20 to "20 (Catering)")
+                            items(presets) { (count, label) ->
+                                FilterChip(
+                                    selected = servingMultiplier == count,
+                                    onClick = { servingMultiplier = count },
+                                    label = { Text(label, fontSize = 11.sp) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
                             }
                         }
                     }

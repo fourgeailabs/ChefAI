@@ -209,6 +209,7 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
         ingredients: String,
         dietary: String,
         cuisine: String,
+        servings: Int = 4,
         onComplete: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -217,7 +218,7 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
             _progressState.value = GenerationProgressState(
                 isGenerating = true,
                 progress = 0.15f,
-                stageMessage = "Channeling ${chefObj.name}'s culinary philosophy...",
+                stageMessage = "Channeling ${chefObj.name}'s culinary philosophy for $servings portion(s)...",
                 chefTipPreview = chefObj.quote,
                 chefName = chefObj.name
             )
@@ -225,7 +226,7 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
             delay(400)
             _progressState.value = _progressState.value.copy(
                 progress = 0.45f,
-                stageMessage = "Synthesizing pantry ingredients for '$craving' craving...",
+                stageMessage = "Synthesizing pantry ingredients for '$craving' craving ($servings portions)...",
                 chefTipPreview = "Master Technique: ${chefObj.signatureTechnique}"
             )
 
@@ -234,7 +235,8 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
                 craving = craving,
                 ingredientsInput = ingredients,
                 dietary = dietary,
-                cuisine = cuisine
+                cuisine = cuisine,
+                servings = servings
             )
 
             _progressState.value = _progressState.value.copy(

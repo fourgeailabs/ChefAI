@@ -25,7 +25,17 @@
 
 ## Release History
 
-### Current Version: `1.06.00` (Build 7) — September 03, 2026
+### Current Version: `1.08.00` (Build 9) — September 03, 2026
+- **Camera Viewport Scrollability**: Added smooth vertical scrolling (`verticalScroll(rememberScrollState())`) and visual drag handles to all camera bottom sheets and overlay cards (AI vision produce verification, barcode lookup result, non-barcode capture sheet, and preset drawers). Users can now comfortably scroll up the bottom card on any device or orientation to access all buttons, verification details, and secondary options without clipping.
+- **Dynamic Portion Size Scaling**: Full bidirectional scaling for portion sizes across the entire app. Steppers allow increasing or decreasing portions from 1 solo serving up to 100 catering portions, complemented by one-tap quick preset chips (`1 (Solo)`, `2 (Couple)`, `4 (Family)`, `6 (Party)`, `8 (Feast)`, `12 (Crowd)`, `20 (Catering)`).
+- **End-to-End AI Recipe Portion Generator**: Gemini AI recipe prompt now explicitly calculates ingredients and nutritional macros scaled to target portion yields, and the recipe detail view dynamically scales measurements when adjusted.
+- **Category & Ingredient Polishing**: Improved category fallback logic ensuring neat, formatted tags for all discovered and scanned grocery goods.
+
+### Version: `1.07.00` (Build 8) — September 03, 2026
+- **CI/CD Pipeline Build Fix & Portions Engine**: Upgraded GitHub Actions setup-gradle action to v4 with Gradle 9.3.1 for reliable automated cloud compilation.
+- **Portion Size Calculation Core**: Integrated AI prompt instructions for scaling ingredient weights, volumes, and nutritional macros according to custom servings.
+
+### Version: `1.06.00` (Build 7) — September 03, 2026
 - **Gradle Wrapper & CI/CD Pipeline Build Fix**: Added root `gradlew` script and updated GitHub Actions with `gradle/actions/setup-gradle@v4` (Gradle 9.3.1) to eliminate `./gradlew: No such file or directory` errors during cloud APK builds.
 - **Universal Local & Remote Gradle Execution**: Enabled seamless fallback execution for `./gradlew assembleDebug` and `gradle assembleDebug`.
 - **Zero-Failure Release Pipeline**: Verified flawless APK artifact packaging and GitHub Releases upload flow.

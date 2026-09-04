@@ -210,7 +210,7 @@ fun SettingsScreen(
         SettingsItem(
             icon = Icons.Default.NewReleases,
             title = "What's New",
-            subtitle = "Release notes for v1.06.00 & historical changelog",
+            subtitle = "Release notes for v1.08.00 & historical changelog",
             onClick = onNavigateWhatsNew
         )
 
@@ -225,7 +225,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "ChefAI Studio v1.06.00 • Master Chef Culinary Engine",
+            text = "ChefAI Studio v1.08.00 • Master Chef Culinary Engine",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.align(Alignment.CenterHorizontally)
