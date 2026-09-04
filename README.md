@@ -35,6 +35,11 @@
 ### Version: `1.00.00` (Build 1) — August 29, 2026
 - Initial release of ChefAI Studio with AI generator, Room Database persistence, and shopping list.
 
+## CI/CD & Build Workflow
+- **GitHub Actions (`build.yml`)**: Automated CI/CD workflow builds debug and release APKs upon push, pull request, manual dispatch, and releases.
+- **Keystore Persistence**: Restores `debug.keystore` from `debug.keystore.base64` to preserve signing credentials and guarantee continuous APK upgrade compatibility across builds.
+- **Release Automation**: Automatically publishes APK assets to GitHub Releases.
+
 ## Creator & Repository
 - **App Creator**: [FourgeAI LABS](https://github.com/fourgeailabs)
 - **GitHub Repository**: [https://github.com/fourgeailabs/chefai](https://github.com/fourgeailabs/chefai)
