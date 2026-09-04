@@ -14,8 +14,8 @@ android {
     applicationId = "com.fourgeailabs.chefai"
     minSdk = 24
     targetSdk = 36
-    versionCode = 9
-    versionName = "1.08.00"
+    versionCode = 10
+    versionName = "1.09.00"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

@@ -196,10 +196,106 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
                         chefInspiration = "Bobby Flay",
                         craving = "Smoky & Spicy",
                         chefQuote = "Layer the bold flavors! Char the chiles, hit it with citrus, and master the heat.",
+                        imageUrl = "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=900&q=85",
+                        platePresentation = "Deep smoky char-grilled edges drizzled with glistening amber chipotle-honey glaze, brightened by vibrant fresh cilantro and charred lime wedges.",
+                        isFavorite = true
+                    )
+                )
+                dao.insertRecipe(
+                    RecipeEntity(
+                        title = "Guy Fieri's Out-Of-Bounds Flavortown BBQ Bacon Smash Burger & Donkey Sauce",
+                        ingredients = "1.5 lbs Ground Chuck (80/20), 8 strips Crispy Applewood Smoked Bacon, 4 Brioche Buns (toasted), 4 slices Sharp Cheddar, 1/2 cup Mayonnaise, 1 tbsp Roasted Garlic Puree, 1 tsp Yellow Mustard, 1 tsp Worcestershire, 1/4 cup Smoky BBQ Glaze, Kosher Salt, Coarse Black Pepper",
+                        instructions = "1. Whisk mayonnaise, roasted garlic puree, yellow mustard, and Worcestershire sauce in a bowl to build Guy's legendary Flavortown Donkey Sauce.\n2. Divide chilled ground beef into loose 3-ounce meatballs. Season aggressively with kosher salt and coarse black pepper.\n3. Heat a heavy flat-top cast iron griddle over maximum smoking heat. Butter and toast brioche buns until golden amber; spread Donkey Sauce generously on both buns.\n4. Drop meatballs onto the blistering griddle. Using a heavy spatula, smash flat with firm downward pressure until thin with lacy outer edges.\n5. Sear undisturbed for 2 minutes until deeply crusted and charred. Scrape up the crust, flip, and immediately top with sharp cheddar and crispy bacon strips.\n6. Drizzle with smoky BBQ glaze, stack double patties onto prepared toasted buns, and serve hot with crinkle-cut fries!",
+                        prepTime = "15 mins",
+                        cookTime = "12 mins",
+                        calories = "680 kcal",
+                        protein = "44g",
+                        carbs = "42g",
+                        fat = "38g",
+                        servings = 4,
+                        difficulty = "Medium",
+                        chefTip = "Smash those patties paper-thin onto a blistering smoking griddle to get those crispy, lacy caramel edges! And don't skimp on the real-deal Donkey Sauce on both toasted buns.",
+                        cuisine = "American Comfort",
+                        dietary = "None",
+                        chefInspiration = "Guy Fieri",
+                        craving = "Crispy & Savory",
+                        chefQuote = "This is out of bounds! We're taking this righteous dish straight to Flavortown!",
+                        imageUrl = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900&q=85",
+                        platePresentation = "Glistening golden-toasted brioche crown with lacy, caramelized burger patty edges spilling out, molten sharp cheddar cheese pooling over smoky bacon strips, and an out-of-bounds drizzle of savory donkey sauce.",
                         isFavorite = true
                     )
                 )
             }
+        }
+    }
+
+    fun searchAndSaveRecipe(
+        query: String,
+        preferredChef: String? = null,
+        servings: Int = 4,
+        onComplete: (Long) -> Unit
+    ) {
+        viewModelScope.launch {
+            _progressState.value = GenerationProgressState(
+                isGenerating = true,
+                progress = 0.20f,
+                stageMessage = "Searching culinary archives & master cookbooks for '$query'...",
+                chefTipPreview = "Consulting Master Chefs...",
+                chefName = preferredChef ?: "Master Chef"
+            )
+
+            delay(350)
+            _progressState.value = _progressState.value.copy(
+                progress = 0.55f,
+                stageMessage = "Developing chef techniques, measurements & step-by-step instructions...",
+                chefTipPreview = "Formulating perfect flavor balance..."
+            )
+
+            val generated = geminiService.searchRecipeWithGemini(
+                query = query,
+                preferredChef = preferredChef,
+                servings = servings
+            )
+
+            _progressState.value = _progressState.value.copy(
+                progress = 0.85f,
+                stageMessage = "Finalizing ${generated.chefInspiration}'s presentation & cookbook guide...",
+                chefTipPreview = generated.chefTip,
+                chefName = generated.chefInspiration
+            )
+
+            delay(300)
+            _progressState.value = _progressState.value.copy(
+                progress = 1.0f,
+                stageMessage = "Your master cookbook recipe is ready!"
+            )
+
+            val recipeEntity = RecipeEntity(
+                title = generated.title,
+                ingredients = generated.ingredients,
+                instructions = generated.instructions,
+                prepTime = generated.prepTime,
+                cookTime = generated.cookTime,
+                calories = generated.calories,
+                protein = generated.protein,
+                carbs = generated.carbs,
+                fat = generated.fat,
+                servings = generated.servings,
+                difficulty = generated.difficulty,
+                chefTip = generated.chefTip,
+                cuisine = generated.cuisine,
+                dietary = generated.dietary,
+                chefInspiration = generated.chefInspiration,
+                craving = generated.craving,
+                chefQuote = generated.chefQuote,
+                imageUrl = generated.imageUrl,
+                platePresentation = generated.platePresentation,
+                isFavorite = true
+            )
+            val id = dao.insertRecipe(recipeEntity)
+            delay(200)
+            _progressState.value = GenerationProgressState(isGenerating = false)
+            onComplete(id)
         }
     }
 
@@ -269,6 +365,8 @@ class ChefViewModel(application: Application) : AndroidViewModel(application) {
                 chefInspiration = generated.chefInspiration,
                 craving = generated.craving,
                 chefQuote = generated.chefQuote,
+                imageUrl = generated.imageUrl,
+                platePresentation = generated.platePresentation,
                 isFavorite = true
             )
             val id = dao.insertRecipe(recipeEntity)

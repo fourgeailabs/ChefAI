@@ -24,6 +24,8 @@ data class RecipeEntity(
     val chefInspiration: String = "Gordon Ramsay", // Gordon Ramsay, Julia Child, Anthony Bourdain, Martha Stewart, Rachael Ray, Bobby Flay
     val craving: String = "Crispy & Savory", // e.g. "Warm & Comforting", "Smoky & Spicy"
     val chefQuote: String = "Cook with passion! Wake up the pan, taste as you go, and season at every layer.",
+    val imageUrl: String = "",
+    val platePresentation: String = "",
     val isFavorite: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )

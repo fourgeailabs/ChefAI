@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,17 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.CelebrityChef
 import com.example.data.CelebrityChefRegistry
+import com.example.data.CookbookMealImageProvider
 import com.example.data.RecipeEntity
 import com.example.ui.ChefViewModel
 import com.example.ui.components.BarcodeScannerDialog
 import com.example.ui.components.BuildRecipeDialog
+import com.example.ui.components.ChefBiographyDialog
 import com.example.ui.components.GeminiProgressModal
 import com.example.ui.components.gourmetButtonShadow
 import com.example.ui.components.gourmetDepth
@@ -53,6 +60,8 @@ fun GenerateScreen(
     var selectedPortions by remember { mutableIntStateOf(4) }
     var showBuildDialog by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showBioChef by remember { mutableStateOf<CelebrityChef?>(null) }
 
     val cravingOptions = listOf(
         "Crispy & Savory",
@@ -118,6 +127,13 @@ fun GenerateScreen(
         )
     }
 
+    if (showBioChef != null) {
+        ChefBiographyDialog(
+            chef = showBioChef!!,
+            onDismiss = { showBioChef = null }
+        )
+    }
+
     if (showBuildDialog) {
         BuildRecipeDialog(
             onDismiss = { showBuildDialog = false },
@@ -140,6 +156,196 @@ fun GenerateScreen(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Top Item: Gemini API Recipe Search Bar
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gourmetDepth(elevation = 8.dp, shapeRadius = 20.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    "Search recipes or ask Gemini AI (e.g. 'Guy Fieri smash burger')...",
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = TerracottaPrimary
+                                )
+                            },
+                            trailingIcon = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (searchQuery.isNotBlank()) {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            if (searchQuery.isNotBlank()) {
+                                                viewModel.searchAndSaveRecipe(
+                                                    query = searchQuery.trim(),
+                                                    preferredChef = selectedChef.name,
+                                                    servings = selectedPortions
+                                                ) { newId ->
+                                                    onRecipeClick(newId)
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = TerracottaPrimary,
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.AutoAwesome,
+                                                    contentDescription = "Search with Gemini AI",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(17.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = TerracottaPrimary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    if (searchQuery.isNotBlank()) {
+                                        viewModel.searchAndSaveRecipe(
+                                            query = searchQuery.trim(),
+                                            preferredChef = selectedChef.name,
+                                            servings = selectedPortions
+                                        ) { newId ->
+                                            onRecipeClick(newId)
+                                        }
+                                    }
+                                }
+                            )
+                        )
+
+                        // Action button when user enters query
+                        AnimatedVisibility(visible = searchQuery.isNotBlank()) {
+                            Column(modifier = Modifier.padding(top = 10.dp)) {
+                                Button(
+                                    onClick = {
+                                        viewModel.searchAndSaveRecipe(
+                                            query = searchQuery.trim(),
+                                            preferredChef = selectedChef.name,
+                                            servings = selectedPortions
+                                        ) { newId ->
+                                            onRecipeClick(newId)
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary)
+                                ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Ask Gemini AI for \"$searchQuery\"", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+
+                                // Quick filter matching local cookbook recipes
+                                val localMatches = recipes.filter {
+                                    it.title.contains(searchQuery, ignoreCase = true) ||
+                                    it.ingredients.contains(searchQuery, ignoreCase = true) ||
+                                    it.chefInspiration.contains(searchQuery, ignoreCase = true)
+                                }
+                                if (localMatches.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Saved in Cookbook:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    localMatches.take(3).forEach { matched ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { onRecipeClick(matched.id) }
+                                                .padding(vertical = 4.dp, horizontal = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.MenuBook, contentDescription = null, tint = TerracottaPrimary, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = matched.title,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Quick Search Suggestions Pills
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val suggestions = listOf(
+                                "🔥 Guy Fieri Smash Burger",
+                                "🐟 Gordon Ramsay Crispy Salmon",
+                                "🍷 Julia Child Boeuf Bourguignon",
+                                "🌮 Bobby Flay Chipotle Tacos",
+                                "🥩 Anthony Bourdain Steak Frites",
+                                "🥔 Martha Stewart Gratin",
+                                "🍝 Rachael Ray 30-Min Pasta"
+                            )
+                            items(suggestions) { pill ->
+                                val cleanQuery = pill.substringAfter(" ")
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.clickable {
+                                        searchQuery = cleanQuery
+                                        viewModel.searchAndSaveRecipe(
+                                            query = cleanQuery,
+                                            preferredChef = selectedChef.name,
+                                            servings = selectedPortions
+                                        ) { newId ->
+                                            onRecipeClick(newId)
+                                        }
+                                    }
+                                ) {
+                                    Text(
+                                        text = pill,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Header Hero Banner
             item {
                 Card(
@@ -261,7 +467,8 @@ fun GenerateScreen(
                             CelebrityChefCard(
                                 chef = chef,
                                 isSelected = isSelected,
-                                onClick = { selectedChef = chef }
+                                onClick = { selectedChef = chef },
+                                onImageClick = { showBioChef = chef }
                             )
                         }
                     }
@@ -699,11 +906,12 @@ fun GenerateScreen(
 fun CelebrityChefCard(
     chef: CelebrityChef,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onImageClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
-            .width(240.dp)
+            .width(250.dp)
             .gourmetDepth(
                 elevation = if (isSelected) 10.dp else 4.dp,
                 shapeRadius = 18.dp,
@@ -727,33 +935,84 @@ fun CelebrityChefCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = chef.accentColor,
-                    modifier = Modifier.size(38.dp)
+                // Mini Chef Image - Click opens biography & website dialog
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, chef.accentColor, CircleShape)
+                        .clickable(onClick = onImageClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = chef.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString(""),
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 14.sp
+                    if (chef.avatarUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = chef.avatarUrl,
+                            contentDescription = "${chef.name} mini image - Tap for Biography",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
+                    } else {
+                        Surface(
+                            shape = CircleShape,
+                            color = chef.accentColor,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = chef.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString(""),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
                     }
                 }
 
-                if (isSelected) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Tap for Biography button
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = TerracottaPrimary
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.clickable(onClick = onImageClick)
                     ) {
-                        Text(
-                            text = "SELECTED",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = chef.accentColor
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Bio ↗",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (isSelected) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = TerracottaPrimary
+                        ) {
+                            Text(
+                                text = "SELECTED",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -814,6 +1073,13 @@ fun RecipeFeedCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val mealImageUrl = CookbookMealImageProvider.resolveMealImage(
+        title = recipe.title,
+        chefInspiration = recipe.chefInspiration,
+        craving = recipe.craving,
+        customImageUrl = recipe.imageUrl
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -822,93 +1088,148 @@ fun RecipeFeedCard(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Column {
+            // Completed Meal Cookbook Photo
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    // Chef & Craving tags
+                AsyncImage(
+                    model = mealImageUrl,
+                    contentDescription = "Completed ${recipe.title} from Cookbook",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.Black.copy(alpha = 0.65f),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Text(
-                                text = recipe.chefInspiration,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                        Icon(
+                            Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = AmberAccent,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Cookbook Appearance",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
 
-                        if (recipe.craving.isNotBlank()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        // Chef & Craving tags
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
+                                color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
-                                    text = recipe.craving,
+                                    text = recipe.chefInspiration,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
+
+                            if (recipe.craving.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = recipe.craving,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = recipe.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    IconButton(onClick = onFavoriteClick) {
+                        Icon(
+                            imageVector = if (recipe.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (recipe.isFavorite) TerracottaPrimary else MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
 
+                if (recipe.platePresentation.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = recipe.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = recipe.platePresentation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                IconButton(onClick = onFavoriteClick) {
-                    Icon(
-                        imageVector = if (recipe.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (recipe.isFavorite) TerracottaPrimary else MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
+                Spacer(modifier = Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Metadata Chips Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${recipe.prepTime} prep • ${recipe.cookTime} cook",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(16.dp), tint = TerracottaSecondary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = recipe.calories,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Metadata Chips Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${recipe.prepTime} prep • ${recipe.cookTime} cook",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(16.dp), tint = TerracottaSecondary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = recipe.calories,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

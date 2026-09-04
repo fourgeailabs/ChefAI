@@ -4,7 +4,12 @@
 
 ## Features & Highlights
 
-- **Animated Gourmet Splash & Loading Screen (NEW)**: Immersive startup screen with a pulsing glowing chef emblem, live progress counter, and status tracking as it connects to internet services and calibrates GPS locale data.
+- **Gemini AI Recipe Search Bar (NEW)**: Search recipes or ask Gemini AI to create any custom dish directly from the top search bar, with instant suggestions for famous chef recipes.
+- **Guy Fieri - The Mayor of Flavortown (NEW)**: Added Guy Fieri to the celebrity chef lineup with bold recipes, culinary style, and signature techniques.
+- **Mini Chef Portraits & Interactive Biographies (NEW)**: Mini avatar portraits on every chef card. Tapping any portrait opens an interactive modal with the chef's full biography, signature dishes, philosophy, and a link to their official website.
+- **Cookbook Plated Meal Presentation (NEW)**: Experience high-definition completed meal images showcasing what each dish is supposed to look like from the chef's cookbook, with detailed plating descriptions and presentation guides.
+- **Detailed Step-by-Step Instructions (NEW)**: High-contrast numbered instruction cards with sensory timing cues and cookbook-grade step-by-step clarity.
+- **Animated Gourmet Splash & Loading Screen**: Immersive startup screen with a pulsing glowing chef emblem, live progress counter, and status tracking as it connects to internet services and calibrates GPS locale data.
 - **GPS Locale & Regional Supermarket Pricing Engine (NEW)**: Real-time location integration that collects GPS coordinates to determine the user's city/locale, calculates regional produce price indexes, and recommends nearby supermarket deals (ALDI, Trader Joe's, Local Farmer's Co-Op, Whole Foods).
 - **AI Camera Vision for Non-Barcode Ingredients**: Use the camera to snap and discover loose produce, fresh garden herbs, cuts of meat, seafood, cheeses, spices, and bulk grocery items without barcodes using Gemini AI multimodal vision.
 - **Mandatory Interactive Verification Step**: Every visual scan presents an interactive verification card where users can verify or edit the detected ingredient name, review culinary notes and chef pairing advice, see automatic shopping list matches, and confirm pantry addition.
@@ -25,7 +30,14 @@
 
 ## Release History
 
-### Current Version: `1.08.00` (Build 9) — September 03, 2026
+### Current Version: `1.09.00` (Build 10) — September 04, 2026
+- **Gemini API Recipe Search Bar**: Added an intuitive search bar at the top of the main screen allowing users to query existing recipes or ask Gemini AI to formulate any custom gourmet recipe in real time. Features quick-suggestion pills for famous chef dishes.
+- **Guy Fieri Added to Master Chefs**: Integrated Guy Fieri as a featured celebrity chef with bold Flavortown recipes, techniques, and culinary profile.
+- **Mini Chef Portraits & Interactive Biographies**: Added mini image portraits to every chef card in the carousel. Tapping a portrait opens an interactive modal presenting their biography, culinary background, and a direct link to their official website.
+- **Cookbook Plated Meal Presentation**: Enhanced recipe details with high-definition completed meal photos displaying what the finished dish looks like from the chef's cookbook, along with detailed plating and visual presentation guides.
+- **Detailed Step-by-Step Instructions**: Overhauled instructions layout with numbered badges, sensory timing cues, and cookbook-grade step clarity.
+
+### Version: `1.08.00` (Build 9) — September 03, 2026
 - **Camera Viewport Scrollability**: Added smooth vertical scrolling (`verticalScroll(rememberScrollState())`) and visual drag handles to all camera bottom sheets and overlay cards (AI vision produce verification, barcode lookup result, non-barcode capture sheet, and preset drawers). Users can now comfortably scroll up the bottom card on any device or orientation to access all buttons, verification details, and secondary options without clipping.
 - **Dynamic Portion Size Scaling**: Full bidirectional scaling for portion sizes across the entire app. Steppers allow increasing or decreasing portions from 1 solo serving up to 100 catering portions, complemented by one-tap quick preset chips (`1 (Solo)`, `2 (Couple)`, `4 (Family)`, `6 (Party)`, `8 (Feast)`, `12 (Crowd)`, `20 (Catering)`).
 - **End-to-End AI Recipe Portion Generator**: Gemini AI recipe prompt now explicitly calculates ingredients and nutritional macros scaled to target portion yields, and the recipe detail view dynamically scales measurements when adjusted.

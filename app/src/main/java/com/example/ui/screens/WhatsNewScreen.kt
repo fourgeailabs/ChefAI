@@ -35,10 +35,23 @@ data class ReleaseNote(
 fun WhatsNewScreen(onBack: () -> Unit) {
     val releases = listOf(
         ReleaseNote(
+            version = "1.09.00",
+            date = "September 04, 2026",
+            title = "Gemini AI Search Bar, Celebrity Chef Bios & Cookbook Meal Visuals",
+            isLatest = true,
+            highlights = listOf(
+                "Gemini API Recipe Search Bar: Dedicated search bar at the top of the main screen allowing users to search recipes or ask Gemini AI to create any dish in seconds, with instant suggestions.",
+                "Guy Fieri Joins the Roster: Added Guy Fieri as a featured celebrity chef with bold Flavortown recipes, techniques, and culinary style.",
+                "Mini Chef Portraits & Interactive Biographies: Every chef card now displays a mini portrait avatar. Tapping any chef's portrait opens their complete biography and direct link to their official website.",
+                "Cookbook Meal Presentation & Images: Integrated completed meal photos showing exactly what the finished dish is supposed to look like from the chef's cookbook, alongside detailed plating guides.",
+                "Detailed Step-by-Step Instructions: Redesigned recipe directions with high-contrast numbered badges, sensory timing cues, and cookbook-grade clarity."
+            )
+        ),
+        ReleaseNote(
             version = "1.08.00",
             date = "September 03, 2026",
             title = "Camera Viewport Scrollability & Dynamic Portion Size Scaling",
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "Scrollable Camera Section: Added smooth vertical scrolling and visual drag handles to the AI Camera & Barcode Scanner bottom cards, ensuring all actions and recognition details are fully visible on any screen size or orientation.",
                 "Bidirectional Portion Size Scaling: Users can now freely increase or decrease portion sizes (from 1 solo portion up to 100 catering portions) with quick presets (Solo, Couple, Family, Party, Feast, Crowd, Catering).",

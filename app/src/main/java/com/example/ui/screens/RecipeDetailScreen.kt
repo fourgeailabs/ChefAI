@@ -23,12 +23,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.CelebrityChefRegistry
+import com.example.data.CookbookMealImageProvider
 import com.example.data.RecipeEntity
 import com.example.ui.ChefViewModel
 import com.example.ui.components.BuildRecipeDialog
@@ -164,6 +167,22 @@ fun RecipeDetailScreen(
         } else {
             val chefObj = CelebrityChefRegistry.getChefByName(recipe.chefInspiration)
 
+            val mealImageUrl = CookbookMealImageProvider.resolveMealImage(
+                title = recipe.title,
+                chefInspiration = recipe.chefInspiration,
+                craving = recipe.craving,
+                customImageUrl = recipe.imageUrl
+            )
+            val plateDescription = if (recipe.platePresentation.isNotBlank()) {
+                recipe.platePresentation
+            } else {
+                CookbookMealImageProvider.getCookbookAppearanceGuide(
+                    title = recipe.title,
+                    chefInspiration = recipe.chefInspiration,
+                    craving = recipe.craving
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -173,6 +192,132 @@ fun RecipeDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Completed Meal Appearance from Chef's Cookbook
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gourmetDepth(elevation = 12.dp, shapeRadius = 24.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(240.dp)
+                        ) {
+                            AsyncImage(
+                                model = mealImageUrl,
+                                contentDescription = "Completed ${recipe.title} plated from ${recipe.chefInspiration}'s Cookbook",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                            )
+                            // Subtle gradient overlay for text readability
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.35f),
+                                                Color.Transparent,
+                                                Color.Black.copy(alpha = 0.8f)
+                                            )
+                                        )
+                                    )
+                            )
+
+                            // Top Pill Badge
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = TerracottaPrimary,
+                                modifier = Modifier
+                                    .padding(14.dp)
+                                    .align(Alignment.TopStart)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "CHEF'S COOKBOOK MEAL",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
+
+                            // Bottom image caption
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Completed Meal Appearance",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "What this dish is supposed to look like from ${recipe.chefInspiration}'s cookbook",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+
+                        // Cookbook Plating & Presentation Guide
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = null,
+                                    tint = TerracottaPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Plating & Visual Presentation Guide",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = plateDescription,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 22.sp,
+                                    modifier = Modifier.padding(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Hero Banner Card with Depth
                 Card(
                     modifier = Modifier
@@ -633,48 +778,82 @@ fun RecipeDetailScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Text(
-                            text = "Step-by-Step Instructions",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatListNumbered,
+                                    contentDescription = null,
+                                    tint = TerracottaPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Detailed Step-by-Step Instructions",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "Cookbook Edition",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
                         val instructionsList = recipe.instructions.lines().filter { it.isNotBlank() }
                         instructionsList.forEachIndexed { index, step ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top
+                            val cleanStep = step.removePrefix("${index + 1}.").removePrefix("${index + 1}:").trim()
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(24.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.Top
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = TerracottaPrimary,
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = "${index + 1}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "${index + 1}",
+                                            text = "STEP ${index + 1}",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            color = TerracottaPrimary,
+                                            fontSize = 11.sp,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = cleanStep,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            lineHeight = 22.sp
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = step.removePrefix("${index + 1}.").trim(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = 22.sp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            if (index < instructionsList.size - 1) {
-                                Divider(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
                             }
                         }
                     }
